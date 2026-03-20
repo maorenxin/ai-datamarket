@@ -15,6 +15,7 @@ import argparse
 import asyncio
 import logging
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, List, Optional
@@ -50,7 +51,14 @@ PERP_BATCH = 1500
 
 
 def get_db() -> duckdb.DuckDBPyConnection:
-    return duckdb.connect(str(DB_PATH))
+    """Get a write connection with retry on lock contention (API may hold a brief read lock)."""
+    for attempt in range(20):
+        try:
+            return duckdb.connect(str(DB_PATH))
+        except duckdb.IOException:
+            if attempt == 19:
+                raise
+            time.sleep(0.05 * (1 + attempt % 5))
 
 
 def get_checkpoint(con: duckdb.DuckDBPyConnection, symbol: str, market_type: str) -> Optional[datetime]:

@@ -11,14 +11,17 @@ DB_PATH = Path(__file__).parent.parent.parent / "data" / "market.duckdb"
 
 
 def get_con() -> duckdb.DuckDBPyConnection:
-    """Return a new read-only DuckDB connection with retry on lock contention."""
-    for attempt in range(10):
+    """Return a new read-only DuckDB connection with retry on lock contention.
+    The crawler holds write locks briefly between HTTP fetches — we retry
+    aggressively to slip in during the gap.
+    """
+    for attempt in range(40):
         try:
             return duckdb.connect(str(DB_PATH), read_only=True)
         except duckdb.IOException:
-            if attempt == 9:
+            if attempt == 39:
                 raise
-            time.sleep(0.05 * (attempt + 1))  # 50ms, 100ms, 150ms...
+            time.sleep(0.02 * (1 + attempt % 5))  # 20-100ms jittered retry, up to ~2s total
 
 
 def get_write_con() -> duckdb.DuckDBPyConnection:

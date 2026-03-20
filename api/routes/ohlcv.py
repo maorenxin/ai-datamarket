@@ -170,6 +170,8 @@ async def get_ohlcv(
     except Exception as e:
         logger.error("DuckDB query failed: %s", e)
         raise HTTPException(status_code=500, detail="Database query failed")
+    finally:
+        con.close()
 
     if rows.empty:
         raise HTTPException(
