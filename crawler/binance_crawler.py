@@ -153,6 +153,9 @@ async def fetch_and_store(
         con.close()
         total += inserted
 
+        # Yield time so API read connections can acquire the lock
+        await asyncio.sleep(0.1)
+
         # Advance past last fetched candle
         last_open_time_ms = int(raw[-1][0])
         current = datetime.fromtimestamp(last_open_time_ms / 1000, tz=timezone.utc) + timedelta(minutes=1)
@@ -221,8 +224,10 @@ async def live_update():
 async def main(mode: str, days: Optional[int]):
     try:
         if mode == "backfill":
-            tasks = [backfill_target(t, days) for t in TARGETS]
-            await asyncio.gather(*tasks)
+            # Run targets sequentially to avoid DuckDB lock contention
+            # (DuckDB only supports one writer at a time)
+            for t in TARGETS:
+                await backfill_target(t, days)
         elif mode == "live":
             await live_update()
         else:
