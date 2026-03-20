@@ -62,9 +62,9 @@ def get_checkpoint(con: duckdb.DuckDBPyConnection, symbol: str, market_type: str
     val = row[0] if row else None
     if val is None:
         return None
-    # duckdb returns datetime objects
+    # Always return naive UTC datetime (consistent with now_utc comparisons)
     if isinstance(val, datetime):
-        return val.replace(tzinfo=timezone.utc) if val.tzinfo is None else val
+        return val.replace(tzinfo=None)
     return val
 
 
@@ -110,13 +110,15 @@ def insert_rows(con: duckdb.DuckDBPyConnection, rows: List[dict]) -> int:
 
 
 async def fetch_and_store(
-    con: duckdb.DuckDBPyConnection,
     symbol: str,
     market_type: str,
     start_dt: datetime,
     end_dt: datetime,
 ) -> int:
-    """Fetch klines in batches from start_dt to end_dt and write to DB. Returns total rows inserted."""
+    """Fetch klines in batches from start_dt to end_dt and write to DB. Returns total rows inserted.
+    Opens a fresh DB connection per batch so the file lock is released between HTTP fetches,
+    allowing the API to read concurrently.
+    """
     batch_size = PERP_BATCH if market_type == "perp" else SPOT_BATCH
     current = start_dt
     total = 0
@@ -129,13 +131,18 @@ async def fetch_and_store(
             "endTime": int(end_dt.timestamp() * 1000),
             "limit": batch_size,
         }
+        # Fetch from Binance — no DB lock held during this HTTP request
         raw = await gate.get_klines(market_type, params)
         if not raw:
             break
 
         rows = [parse_kline(r, symbol, market_type) for r in raw]
         valid_rows = validate_batch(rows, log_warnings=False)
+
+        # Open connection, insert, close immediately — lock held only during INSERT
+        con = get_db()
         inserted = insert_rows(con, valid_rows)
+        con.close()
         total += inserted
 
         # Advance past last fetched candle
@@ -159,9 +166,12 @@ async def backfill_target(target: dict, days: Optional[int] = None):
     """Backfill one symbol. If days is set, only fetch the last N days."""
     symbol = target["symbol"]
     market_type = target["market_type"]
-    con = get_db()
 
+    # Use a short-lived connection just for the checkpoint query
+    con = get_db()
     checkpoint = get_checkpoint(con, symbol, market_type)
+    con.close()
+
     now_utc = datetime.utcnow().replace(second=0, microsecond=0)
 
     if days is not None:
@@ -170,23 +180,22 @@ async def backfill_target(target: dict, days: Optional[int] = None):
         if checkpoint and checkpoint > start_dt:
             start_dt = checkpoint + timedelta(minutes=1)
     else:
-        # Full historical backfill
+        # Full historical backfill: always start from the target's start date.
+        # INSERT OR IGNORE handles any existing rows, so it's safe to re-scan.
+        start_dt = datetime.strptime(target["start"], "%Y-%m-%d")
         if checkpoint:
-            start_dt = checkpoint + timedelta(minutes=1)
-            logger.info("%s %s: resuming from %s", symbol, market_type, checkpoint.isoformat())
+            logger.info("%s %s: full backfill from %s (have data up to %s)",
+                        symbol, market_type, start_dt.date(), checkpoint.isoformat())
         else:
-            start_dt = datetime.strptime(target["start"], "%Y-%m-%d")
-            logger.info("%s %s: starting from %s", symbol, market_type, start_dt.date())
+            logger.info("%s %s: full backfill from %s", symbol, market_type, start_dt.date())
 
     if start_dt >= now_utc:
         logger.info("%s %s: already up to date", symbol, market_type)
-        con.close()
         return
 
     logger.info("%s %s: fetching %s → %s", symbol, market_type, start_dt.date(), now_utc.date())
-    total = await fetch_and_store(con, symbol, market_type, start_dt, now_utc)
+    total = await fetch_and_store(symbol, market_type, start_dt, now_utc)
     logger.info("%s %s: backfill complete, %d total rows inserted", symbol, market_type, total)
-    con.close()
 
 
 async def live_update():

@@ -113,16 +113,36 @@ Stock OHLCV · Company Governance · Financial Statements · EVA Data · Fund Da
 
 ## Query Examples for Agents
 
+**IMPORTANT — URL encoding:** The `/` in spot symbols must be encoded as `%2F`.
+**IMPORTANT — Proxy bypass:** Always bypass proxy for localhost calls.
+
+```bash
+# BTC/USDT spot 1h, last 24 candles
+curl --noproxy '*' "http://localhost:8402/v1/ohlcv?symbol=BTC%2FUSDT&interval=1h&duration=24"
+
+# BTC perpetual futures 4h, last 30 candles (no slash needed)
+curl --noproxy '*' "http://localhost:8402/v1/ohlcv?symbol=BTCUSDT&interval=4h&duration=30"
+
+# ETH spot daily, ending at specific date
+curl --noproxy '*' "http://localhost:8402/v1/ohlcv?symbol=ETH%2FUSDT&interval=1d&end_time=2025-03-01&duration=30"
+
+# List supported symbols
+curl --noproxy '*' "http://localhost:8402/v1/symbols"
+```
+
 ```python
-# Get last 24 hours of BTC/USDT 1h candles
-fetch("http://localhost:8402/v1/ohlcv?symbol=BTC/USDT&interval=1h&duration=24")
+import urllib.request, json, os
 
-# Get BTC perpetual futures 4h candles
-fetch("http://localhost:8402/v1/ohlcv?symbol=BTCUSDT&interval=4h&duration=30")
+def query_ohlcv(symbol, interval="1h", duration=24, end_time=None):
+    encoded = symbol.replace("/", "%2F")
+    url = f"http://localhost:8402/v1/ohlcv?symbol={encoded}&interval={interval}&duration={duration}"
+    if end_time:
+        url += f"&end_time={end_time}"
+    # Bypass proxy for localhost
+    proxy = urllib.request.ProxyHandler({})
+    opener = urllib.request.build_opener(proxy)
+    with opener.open(url) as r:
+        return json.loads(r.read())
 
-# Get ETH spot daily candles ending at specific time
-fetch("http://localhost:8402/v1/ohlcv?symbol=ETH/USDT&interval=1d&end_time=2025-03-01&duration=30")
-
-# With AI ID for token tracking
-fetch("http://localhost:8402/v1/ohlcv?symbol=BTC/USDT&interval=1h&duration=24&ai_id=YOUR_AI_ID")
+data = query_ohlcv("BTC/USDT", interval="1h", duration=24)
 ```
