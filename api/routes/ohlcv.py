@@ -118,6 +118,50 @@ async def list_symbols():
     }
 
 
+@router.get("/coverage")
+async def data_coverage():
+    """Show available date ranges for each symbol (helps agents pick valid time ranges)."""
+    con = get_con()
+    try:
+        df = con.execute(
+            """
+            SELECT symbol, market_type,
+                   COUNT(*) as rows,
+                   MIN(open_time) as min_time,
+                   MAX(open_time) as max_time
+            FROM ohlcv_1m
+            GROUP BY symbol, market_type
+            ORDER BY symbol, market_type
+            """
+        ).fetchdf()
+    finally:
+        con.close()
+
+    # Map back to user-facing symbol names
+    db_to_user = {}
+    for user_sym, (db_sym, mtype) in SUPPORTED_SYMBOLS.items():
+        db_to_user[(db_sym, mtype)] = user_sym
+
+    coverage = []
+    for _, row in df.iterrows():
+        key = (row["symbol"], row["market_type"])
+        user_sym = db_to_user.get(key, row["symbol"])
+        min_t = row["min_time"]
+        max_t = row["max_time"]
+        if hasattr(min_t, "replace"):
+            min_t = min_t.replace(tzinfo=timezone.utc).astimezone(TZ_OFFSET).strftime("%Y-%m-%d")
+            max_t = max_t.replace(tzinfo=timezone.utc).astimezone(TZ_OFFSET).strftime("%Y-%m-%d")
+        coverage.append({
+            "symbol": user_sym,
+            "market_type": row["market_type"],
+            "rows": int(row["rows"]),
+            "from": min_t,
+            "to": max_t,
+        })
+
+    return {"coverage": coverage, "note": "Data is being continuously backfilled. Gaps may exist between 'from' and 'to'."}
+
+
 @router.get("/ohlcv")
 async def get_ohlcv(
     symbol: str = Query(..., description="e.g. BTC/USDT (spot) or BTCUSDT (perp)"),
@@ -174,10 +218,28 @@ async def get_ohlcv(
         con.close()
 
     if rows.empty:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No data found for {symbol} {interval} in the requested time range.",
-        )
+        # Query available date range to help the agent adjust
+        try:
+            con2 = get_con()
+            range_row = con2.execute(
+                "SELECT MIN(open_time), MAX(open_time) FROM ohlcv_1m WHERE symbol=? AND market_type=? AND exchange='binance'",
+                [db_symbol, market_type],
+            ).fetchone()
+            con2.close()
+        except Exception:
+            range_row = None
+
+        if range_row and range_row[0]:
+            min_t = range_row[0].replace(tzinfo=timezone.utc).astimezone(TZ_OFFSET).strftime("%Y-%m-%d")
+            max_t = range_row[1].replace(tzinfo=timezone.utc).astimezone(TZ_OFFSET).strftime("%Y-%m-%d")
+            detail = (
+                f"No data for {symbol} in requested range. "
+                f"Available data: {min_t} to {max_t}. "
+                f"Data is being backfilled — try a date within this range, or retry later."
+            )
+        else:
+            detail = f"No data found for {symbol}. Data may still be loading."
+        raise HTTPException(status_code=404, detail=detail)
 
     # Aggregate to requested interval
     df = aggregate_ohlcv(rows, interval_minutes)

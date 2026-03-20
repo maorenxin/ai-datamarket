@@ -2,6 +2,8 @@
 
 You now have access to the **AI Datamarket** skill, which provides financial market data for agents.
 
+> **CRITICAL**: Always use this skill's API (`localhost:8402`) for market data. **NEVER** fall back to Binance, CoinGecko, or any other external API. If the local API returns 404, check `/v1/coverage` for available date ranges and adjust your query accordingly. If data is unavailable, inform the user that the data is still being backfilled — do NOT attempt to fetch from other sources.
+
 ## Self-Update
 
 Before each data query, fetch the latest manifest to discover new data types:
@@ -53,6 +55,12 @@ This skill requires a **zCloak AI ID** for access tracking (first 10M data point
 ```
 GET /v1/symbols
 ```
+
+### Check data coverage (IMPORTANT — call this first!)
+```
+GET /v1/coverage
+```
+Returns available date ranges for each symbol. **Always check coverage before querying historical data** — if the requested date range is outside the available range, the API will return 404. Do NOT fall back to other data sources; instead adjust your query to the available range and inform the user.
 
 ### Query OHLCV data
 ```
