@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Bloomberg — AI Datamarket</title>
+  <meta name="description" content="One command. All financial data. For AI agents. The Bloomberg terminal for the agentic era." />
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Orbitron + JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            gold: { 300: '#fcd34d', 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309' },
+            dark: { 900: '#0a0a0f', 800: '#0e0e16', 700: '#12121d', 600: '#1a1a2e', 500: '#22223b' },
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          animation: {
+            'pulse-gold': 'pulse-gold 3s ease-in-out infinite',
+            'float': 'float 20s linear infinite',
+            'glow-pulse': 'glow-pulse 4s ease-in-out infinite',
+          },
+          keyframes: {
+            'pulse-gold': {
+              '0%, 100%': { boxShadow: '0 0 20px rgba(245,158,11,0.3), 0 0 40px rgba(245,158,11,0.1)' },
+              '50%': { boxShadow: '0 0 35px rgba(245,158,11,0.6), 0 0 70px rgba(245,158,11,0.2)' },
+            },
+            'glow-pulse': {
+              '0%, 100%': { opacity: '0.4' },
+              '50%': { opacity: '0.8' },
+            },
+            float: {
+              '0%': { transform: 'translateY(0) translateX(0)' },
+              '25%': { transform: 'translateY(-30px) translateX(15px)' },
+              '50%': { transform: 'translateY(-15px) translateX(-10px)' },
+              '75%': { transform: 'translateY(-40px) translateX(5px)' },
+              '100%': { transform: 'translateY(0) translateX(0)' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ─── Base ─── */
+    * { box-sizing: border-box; }
+    html { color-scheme: dark; }
+    body {
+      background-color: #0a0a0f;
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ─── Animated grid background ─── */
+    .grid-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(245,158,11,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,158,11,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+    }
+
+    /* ─── Floating orbs ─── */
+    .orb {
+      position: fixed; border-radius: 50%; filter: blur(80px);
+      pointer-events: none; z-index: 0;
+    }
+    .orb-gold {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%);
+      top: -100px; left: -100px;
+      animation: float 25s ease-in-out infinite;
+    }
+    .orb-purple {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%);
+      bottom: 100px; right: -80px;
+      animation: float 30s ease-in-out infinite reverse;
+    }
+    .orb-blue {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 70%);
+      top: 40%; left: 60%;
+      animation: float 20s ease-in-out infinite 5s;
+    }
+
+    /* ─── Glassmorphism card ─── */
+    .glass {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* ─── Gold gradient text ─── */
+    .text-gold-gradient {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 40%, #d97706 80%, #fcd34d 100%);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* ─── Tab active ─── */
+    .tab-btn.active {
+      background: rgba(245,158,11,0.12);
+      border-color: rgba(245,158,11,0.5);
+      color: #f59e0b;
+    }
+
+    /* ─── Code block ─── */
+    .code-block {
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(245,158,11,0.2);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ─── Data category cards ─── */
+    .data-card-active {
+      background: rgba(245,158,11,0.06);
+      border: 1px solid rgba(245,158,11,0.3);
+      animation: pulse-gold 3s ease-in-out infinite;
+    }
+    .data-card-active:hover {
+      background: rgba(245,158,11,0.1);
+      border-color: rgba(245,158,11,0.6);
+      transform: translateY(-2px);
+    }
+    .data-card-soon {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .data-card-soon:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-2px);
+    }
+    .data-card-active, .data-card-soon {
+      transition: all 200ms ease;
+    }
+
+    /* ─── Lang toggle ─── */
+    .lang-btn.active {
+      background: rgba(245,158,11,0.15);
+      color: #f59e0b;
+      border-color: rgba(245,158,11,0.4);
+    }
+
+    /* ─── Copy button feedback ─── */
+    .copy-btn.copied {
+      background: rgba(34,197,94,0.15);
+      border-color: rgba(34,197,94,0.4);
+      color: #86efac;
+    }
+
+    /* ─── Scanline overlay (subtle) ─── */
+    .scanlines {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.03) 3px,
+        rgba(0,0,0,0.03) 4px
+      );
+    }
+
+    /* ─── Reduced motion ─── */
+    @media (prefers-reduced-motion: reduce) {
+      .orb, .data-card-active { animation: none; }
+      * { transition-duration: 0.01ms !important; }
+    }
+
+    /* ─── Scrollbar ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0f; }
+    ::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.3); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="grid-bg"></div>
+<div class="orb orb-gold"></div>
+<div class="orb orb-purple"></div>
+<div class="orb orb-blue"></div>
+<div class="scanlines"></div>
+
+<!-- ═══════════════════════════════════════════ NAVBAR ═══════════════════════════════════════════ -->
+<nav class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4" style="background: linear-gradient(to bottom, rgba(10,10,15,0.95) 0%, transparent 100%);">
+  <!-- Logo -->
+  <div class="flex items-center gap-2">
+    <!-- Chart icon SVG -->
+    <svg class="w-6 h-6 text-gold-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#f59e0b">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+      <polyline points="16 7 22 7 22 13"></polyline>
+    </svg>
+    <span class="font-orbitron font-bold text-sm tracking-wider" style="color:#f59e0b">AI DATAMARKET</span>
+  </div>
+
+  <!-- Language toggle -->
+  <div class="flex items-center gap-1 glass rounded-lg p-1">
+    <button id="lang-en" class="lang-btn active text-xs font-mono px-3 py-1.5 rounded-md border border-transparent cursor-pointer transition-all duration-200" onclick="setLang('en')">EN</button>
+    <button id="lang-zh" class="lang-btn text-xs font-mono px-3 py-1.5 rounded-md border border-transparent cursor-pointer transition-all duration-200 text-slate-400" onclick="setLang('zh')">中文</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════ MAIN ═══════════════════════════════════════════ -->
+<main class="relative z-10">
+
+  <!-- ─────────── MODULE 1: HERO ─────────── -->
+  <section class="min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-16">
+    <div class="w-full max-w-4xl mx-auto text-center">
+
+      <!-- Eyebrow -->
+      <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 mb-8 text-xs font-mono" style="border-color:rgba(245,158,11,0.2); color:#f59e0b">
+        <span class="w-2 h-2 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+        <span data-en="Live · Crypto OHLCV Available Now" data-zh="上线中 · 加密货币 OHLCV 数据已上线">Live · Crypto OHLCV Available Now</span>
+      </div>
+
+      <!-- Main headline -->
+      <h1 class="font-orbitron font-extrabold mb-4 leading-none tracking-tight" style="font-size: clamp(2.5rem, 7vw, 5.5rem)">
+        <span class="text-gold-gradient">AI Bloomberg</span>
+      </h1>
+
+      <!-- Subheading -->
+      <p class="text-slate-300 mb-3 font-light leading-relaxed" style="font-size: clamp(1rem, 2.5vw, 1.35rem); max-width: 600px; margin-left:auto; margin-right:auto">
+        <span data-en="One command. All financial data. For AI agents." data-zh="一条命令。全量金融数据。专为 AI Agent。">One command. All financial data. For AI agents.</span>
+      </p>
+      <p class="text-slate-500 text-sm mb-12 font-mono">
+        <span data-en="The Bloomberg terminal for the agentic era." data-zh="属于 Agent 时代的 Bloomberg 终端。">The Bloomberg terminal for the agentic era.</span>
+      </p>
+
+      <!-- Install box -->
+      <div class="glass rounded-2xl p-6 max-w-2xl mx-auto" style="border-color:rgba(245,158,11,0.15)">
+
+        <!-- Tab switcher -->
+        <div class="flex gap-2 mb-5 justify-center flex-wrap">
+          <button class="tab-btn active text-xs font-mono px-4 py-2 rounded-lg border border-white/10 cursor-pointer transition-all duration-200 text-slate-300" onclick="setTab(this, 'claude-code')">Claude Code</button>
+          <button class="tab-btn text-xs font-mono px-4 py-2 rounded-lg border border-white/10 cursor-pointer transition-all duration-200 text-slate-300" onclick="setTab(this, 'openclaw')">OpenClaw</button>
+          <button class="tab-btn text-xs font-mono px-4 py-2 rounded-lg border border-white/10 cursor-pointer transition-all duration-200 text-slate-300" onclick="setTab(this, 'codex')">Codex</button>
+        </div>
+
+        <!-- Command block -->
+        <div class="code-block rounded-xl p-4 flex items-start gap-3 group">
+          <!-- Terminal prompt -->
+          <span class="text-gold-500 text-sm font-mono mt-0.5 select-none flex-shrink-0">$</span>
+          <!-- Command text -->
+          <code id="install-cmd" class="text-slate-200 text-sm font-mono leading-relaxed flex-1 text-left break-all">
+            Install the AI Datamarket skill from https://ai-datamarket.github.io/skill/SKILL.md
+          </code>
+          <!-- Copy button -->
+          <button id="copy-btn" onclick="copyCommand()" class="copy-btn flex-shrink-0 flex items-center gap-1.5 glass rounded-lg px-3 py-1.5 text-xs font-mono border border-white/10 text-slate-400 cursor-pointer transition-all duration-200 hover:text-white hover:border-white/20" aria-label="Copy command">
+            <!-- Copy icon -->
+            <svg id="copy-icon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+            </svg>
+            <span id="copy-label" data-en="Copy" data-zh="复制">Copy</span>
+          </button>
+        </div>
+
+        <!-- Note line -->
+        <p class="text-xs font-mono text-slate-500 mt-4 text-center">
+          <span data-en="Free · 10M tokens included · " data-zh="免费 · 内含 1000 万 token · ">Free · 10M tokens included · </span>
+          <a href="https://id.zcloak.ai" target="_blank" rel="noopener" class="text-gold-500 hover:text-gold-400 underline underline-offset-2 transition-colors duration-200">
+            <span data-en="zCloak AI ID required" data-zh="需要 zCloak AI ID">zCloak AI ID required</span>
+          </a>
+        </p>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="flex flex-wrap justify-center gap-8 mt-14 text-center">
+        <div>
+          <div class="font-orbitron text-2xl font-bold text-gold-400">6</div>
+          <div class="text-xs text-slate-500 mt-1 font-mono" data-en="Trading Pairs" data-zh="交易对">Trading Pairs</div>
+        </div>
+        <div class="w-px h-10 bg-white/10 self-center hidden sm:block"></div>
+        <div>
+          <div class="font-orbitron text-2xl font-bold text-gold-400">10M</div>
+          <div class="text-xs text-slate-500 mt-1 font-mono" data-en="Free Tokens" data-zh="免费 Token">Free Tokens</div>
+        </div>
+        <div class="w-px h-10 bg-white/10 self-center hidden sm:block"></div>
+        <div>
+          <div class="font-orbitron text-2xl font-bold text-gold-400">2017</div>
+          <div class="text-xs text-slate-500 mt-1 font-mono" data-en="Historical Data From" data-zh="历史数据起始年">Historical Data From</div>
+        </div>
+        <div class="w-px h-10 bg-white/10 self-center hidden sm:block"></div>
+        <div>
+          <div class="font-orbitron text-2xl font-bold text-gold-400">1m</div>
+          <div class="text-xs text-slate-500 mt-1 font-mono" data-en="Min Granularity" data-zh="最小粒度">Min Granularity</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── MODULE 2: DATA CATEGORIES ─────────── -->
+  <section class="relative px-4 pb-24 pt-4">
+    <div class="max-w-6xl mx-auto">
+
+      <!-- Section header -->
+      <div class="text-center mb-12">
+        <div class="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 mb-5 text-xs font-mono text-slate-400" style="border-color:rgba(255,255,255,0.08)">
+          <!-- Database icon -->
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path></svg>
+          <span data-en="Data Catalog" data-zh="数据目录">Data Catalog</span>
+        </div>
+        <h2 class="font-orbitron font-bold text-slate-100 mb-3" style="font-size: clamp(1.5rem, 4vw, 2.5rem)">
+          <span data-en="Supported Data" data-zh="支持的数据">Supported Data</span>
+        </h2>
+        <p class="text-slate-500 text-sm font-mono max-w-lg mx-auto" data-en="More data categories activating soon. Request a category on GitHub." data-zh="更多数据类别即将上线。欢迎在 GitHub 上提交数据需求。">More data categories activating soon. Request a category on GitHub.</p>
+      </div>
+
+      <!-- Cards grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+
+        <!-- ── ACTIVE: Crypto ── -->
+        <div class="data-card-active rounded-xl p-4 cursor-default col-span-2 sm:col-span-1 lg:col-span-1" style="position:relative; overflow:hidden">
+          <!-- Glow bg -->
+          <div class="absolute inset-0 rounded-xl" style="background: radial-gradient(circle at 30% 50%, rgba(245,158,11,0.08) 0%, transparent 70%); pointer-events:none"></div>
+
+          <div class="relative z-10">
+            <!-- LIVE badge -->
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3)">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+                LIVE
+              </span>
+            </div>
+            <!-- Icon -->
+            <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+            <div class="font-semibold text-sm text-white mb-1" data-en="Crypto Market Data" data-zh="加密货币市场数据">Crypto Market Data</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">BTC · ETH · SOL<br/>Spot &amp; Perp · OHLCV</div>
+          </div>
+        </div>
+
+        <!-- ── COMING SOON cards ── -->
+        <!-- Stock Trading -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Stock Trading Data" data-zh="股票交易数据">Stock Trading Data</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="股票交易数据" data-zh="Stock Trading">股票交易数据</div>
+        </div>
+
+        <!-- Corporate Governance -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Corporate Governance" data-zh="公司治理">Corporate Governance</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="公司治理" data-zh="Corporate Governance">公司治理</div>
+        </div>
+
+        <!-- Financial Statements -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Financial Statements" data-zh="公司财务数据">Financial Statements</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="公司财务数据" data-zh="Financial Statements">公司财务数据</div>
+        </div>
+
+        <!-- EVA Data -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="EVA Data" data-zh="上市公司EVA数据">EVA Data</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="上市公司EVA" data-zh="Listed Co. EVA">上市公司EVA</div>
+        </div>
+
+        <!-- Fund Trading -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Fund Trading" data-zh="基金交易数据">Fund Trading</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="基金交易数据" data-zh="Fund Trading">基金交易数据</div>
+        </div>
+
+        <!-- Bond Data -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Bond Data" data-zh="债券数据">Bond Data</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="债券数据" data-zh="Bond">债券数据</div>
+        </div>
+
+        <!-- Options -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 0 1 2 2v7"></path><line x1="6" y1="9" x2="6" y2="21"></line></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Options" data-zh="期权数据">Options</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="期权数据" data-zh="Options">期权数据</div>
+        </div>
+
+        <!-- Domestic Futures -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Domestic Futures" data-zh="国内期货数据">Domestic Futures</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="国内期货数据" data-zh="Domestic Futures">国内期货数据</div>
+        </div>
+
+        <!-- Commodities -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Commodities" data-zh="大宗产品数据">Commodities</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="大宗产品数据" data-zh="Commodities">大宗产品数据</div>
+        </div>
+
+        <!-- OTC Market -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="OTC Market" data-zh="新三板数据">OTC Market</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="新三板数据" data-zh="OTC Market">新三板数据</div>
+        </div>
+
+        <!-- Banking Data -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="21" y2="22"></line><line x1="6" y1="18" x2="6" y2="11"></line><line x1="10" y1="18" x2="10" y2="11"></line><line x1="14" y1="18" x2="14" y2="11"></line><line x1="18" y1="18" x2="18" y2="11"></line><polygon points="12 2 20 7 4 7"></polygon></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Banking Data" data-zh="银行数据">Banking Data</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="银行数据" data-zh="Banking">银行数据</div>
+        </div>
+
+        <!-- Internet Products -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Internet Products" data-zh="互联网产品">Internet Products</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="互联网产品" data-zh="Internet">互联网产品</div>
+        </div>
+
+        <!-- Overseas Markets -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"></path><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Overseas Markets" data-zh="海外市场">Overseas Markets</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="海外市场" data-zh="Overseas">海外市场</div>
+        </div>
+
+        <!-- Market News -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 0-2-2"></path><path d="M4 22a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h2"></path><path d="M18 14h-8M18 10h-8M18 6h-4"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Market News" data-zh="市场资讯">Market News</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="市场资讯" data-zh="Market News">市场资讯</div>
+        </div>
+
+        <!-- Legal & Regulatory -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Legal &amp; Regulatory" data-zh="法律法规">Legal &amp; Regulatory</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="法律法规" data-zh="Legal">法律法规</div>
+        </div>
+
+        <!-- Exhibition Info -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Exhibition Info" data-zh="会展信息">Exhibition Info</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="会展信息" data-zh="Exhibition">会展信息</div>
+        </div>
+
+        <!-- Index Data -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Index Data" data-zh="指数数据">Index Data</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="指数数据" data-zh="Index">指数数据</div>
+        </div>
+
+        <!-- Intl Futures -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Intl Futures" data-zh="国际期货数据">Intl Futures</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="国际期货数据" data-zh="Intl Futures">国际期货数据</div>
+        </div>
+
+        <!-- Macroeconomics -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z"></path><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Macroeconomics" data-zh="宏观经济数据">Macroeconomics</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="宏观经济数据" data-zh="Macro">宏观经济数据</div>
+        </div>
+
+        <!-- Industrial Chain -->
+        <div class="data-card-soon rounded-xl p-4 cursor-default">
+          <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+          </div>
+          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Industrial Chain" data-zh="产业链">Industrial Chain</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="产业链" data-zh="Industrial Chain">产业链</div>
+        </div>
+
+      </div><!-- /grid -->
+
+    </div>
+  </section>
+
+  <!-- ─────────── MODULE 3: FOOTER ─────────── -->
+  <footer class="relative z-10 border-t px-4 py-10" style="border-color:rgba(255,255,255,0.06); background:rgba(0,0,0,0.4)">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+
+        <!-- Logo + copyright -->
+        <div class="flex flex-col items-center sm:items-start gap-1">
+          <div class="flex items-center gap-2 mb-1">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+            <span class="font-orbitron text-xs font-bold" style="color:#f59e0b">AI DATAMARKET</span>
+          </div>
+          <p class="text-xs text-slate-600 font-mono" data-en="© 2026 AI Datamarket. Open source." data-zh="© 2026 AI Datamarket. 开源项目。">© 2026 AI Datamarket. Open source.</p>
+        </div>
+
+        <!-- Links -->
+        <nav class="flex flex-wrap items-center gap-6 text-xs font-mono">
+          <a href="#" class="text-slate-500 hover:text-slate-300 transition-colors duration-200 cursor-pointer" data-en="Privacy Policy" data-zh="隐私政策">Privacy Policy</a>
+          <a href="#" class="text-slate-500 hover:text-slate-300 transition-colors duration-200 cursor-pointer" data-en="Whitepaper" data-zh="白皮书">Whitepaper</a>
+          <a href="#" class="text-slate-500 hover:text-gold-500 transition-colors duration-200 cursor-pointer flex items-center gap-1.5">
+            <!-- GitHub icon -->
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>
+            GitHub
+          </a>
+        </nav>
+
+      </div>
+    </div>
+  </footer>
+
+</main>
+
+<!-- ═══════════════════════════════════════════ JAVASCRIPT ═══════════════════════════════════════════ -->
+<script>
+  // ─── Language toggle ───
+  let currentLang = 'en';
+
+  function setLang(lang) {
+    currentLang = lang;
+    document.querySelectorAll('[data-en][data-zh]').forEach(el => {
+      el.textContent = el.getAttribute('data-' + lang);
+    });
+    // Toggle button states
+    document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+    document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
+    document.getElementById('lang-en').classList.toggle('text-slate-400', lang !== 'en');
+    document.getElementById('lang-zh').classList.toggle('text-slate-400', lang !== 'zh');
+
+    // Update html lang attribute
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  }
+
+  // ─── Tab switcher ───
+  const INSTALL_CMD = 'Install the AI Datamarket skill from https://ai-datamarket.github.io/skill/SKILL.md';
+
+  function setTab(btn, tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('install-cmd').textContent = INSTALL_CMD;
+  }
+
+  // ─── Copy command ───
+  function copyCommand() {
+    const btn = document.getElementById('copy-btn');
+    const label = document.getElementById('copy-label');
+    const icon = document.getElementById('copy-icon');
+
+    navigator.clipboard.writeText(INSTALL_CMD).then(() => {
+      btn.classList.add('copied');
+      label.textContent = currentLang === 'zh' ? '已复制！' : 'Copied!';
+      icon.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
+
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        label.textContent = currentLang === 'zh' ? '复制' : 'Copy';
+        icon.innerHTML = '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>';
+      }, 2000);
+    }).catch(() => {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = INSTALL_CMD;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+  }
+</script>
+
+</body>
+</html>

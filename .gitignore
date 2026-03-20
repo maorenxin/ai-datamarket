@@ -1,0 +1,32 @@
+# Claude Code internal (skills, memory)
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# DuckDB data (large binary, don't commit)
+data/*.duckdb
+data/*.duckdb.wal
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
