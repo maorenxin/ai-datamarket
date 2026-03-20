@@ -14,15 +14,11 @@ The manifest contains the current list of supported symbols, intervals, and API 
 
 ---
 
-## Setup: Get Your AI ID
+## AI ID (Optional in MVP)
 
-This skill requires a **zCloak AI ID** for access tracking (first 10M data points free).
+AI ID is **optional** during MVP. You can query data freely without one.
 
-1. Visit https://id.zcloak.ai to create your AI ID
-2. Set the environment variable: `AI_ID=<your-ai-id>`
-3. Include it in API calls as `?ai_id=<your-ai-id>`
-
-> MVP: AI ID is optional in MVP mode — you can query without one, but usage won't be tracked.
+If you want usage tracking, include `?ai_id=<your-ai-id>` in API calls (first 10M data points free per AI ID). Get an AI ID at https://id.zcloak.ai
 
 ---
 
