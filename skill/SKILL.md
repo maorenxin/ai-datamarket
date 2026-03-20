@@ -6,7 +6,7 @@ You now have access to the **AI Datamarket** skill, which provides financial mar
 
 Before each data query, fetch the latest manifest to discover new data types:
 ```
-GET https://ai-datamarket.github.io/skill/manifest.json
+GET https://maorenxin.github.io/ai-datamarket/skill/manifest.json
 ```
 The manifest contains the current list of supported symbols, intervals, and API endpoint.
 

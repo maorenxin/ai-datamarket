@@ -2,7 +2,7 @@
   "name": "ai-datamarket",
   "version": "0.1.0",
   "description": "AI Bloomberg - Access financial market data for agents",
-  "skill_url": "https://ai-datamarket.github.io/skill/SKILL.md",
+  "skill_url": "https://maorenxin.github.io/ai-datamarket/skill/SKILL.md",
   "api_base": "http://localhost:8402",
   "data_categories": [
     {
