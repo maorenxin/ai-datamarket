@@ -14,6 +14,8 @@ from typing import Any, List, Optional
 
 import httpx
 
+from crawler.base_gate import BaseGate
+
 logger = logging.getLogger(__name__)
 
 SPOT_BASE = "https://api.binance.com"
@@ -49,7 +51,7 @@ class WeightCounter:
         self.add(cost)
 
 
-class BinanceGate:
+class BinanceGate(BaseGate):
     """Singleton gate for all Binance HTTP requests."""
 
     _instance: Optional["BinanceGate"] = None
@@ -84,8 +86,9 @@ class BinanceGate:
     async def get_klines(
         self,
         market_type: str,  # "spot" | "perp"
-        params: dict[str, Any],
+        params: dict,
         weight: int = 2,
+        **kwargs: Any,
     ) -> List[list]:
         base = SPOT_BASE if market_type == "spot" else PERP_BASE
         path = "/api/v3/klines" if market_type == "spot" else "/fapi/v1/klines"
@@ -127,7 +130,10 @@ class BinanceGate:
 
             raise RuntimeError(f"Failed after 5 attempts: {url} {params}")
 
-    async def close(self):
+    def max_batch_size(self, market_type: str) -> int:
+        return 1500 if market_type == "perp" else 1000
+
+    async def close(self) -> None:
         if self._client and not self._client.is_closed:
             await self._client.aclose()
         # Reset semaphore so it's recreated on next use (in a new event loop)

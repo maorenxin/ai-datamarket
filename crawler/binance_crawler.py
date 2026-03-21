@@ -90,7 +90,7 @@ def parse_kline(raw: list, symbol: str, market_type: str) -> dict[str, Any]:
         "close": float(raw[4]),
         "volume": float(raw[5]),
         "quote_volume": float(raw[7]),
-        "trade_count": int(raw[8]),
+        "trade_count": int(float(raw[8])),
     }
 
 
@@ -127,16 +127,18 @@ async def fetch_and_store(
     Opens a fresh DB connection per batch so the file lock is released between HTTP fetches,
     allowing the API to read concurrently.
     """
+    import calendar
     batch_size = PERP_BATCH if market_type == "perp" else SPOT_BATCH
-    current = start_dt
+    current_ms = int(calendar.timegm(start_dt.timetuple())) * 1000
+    end_ms = int(calendar.timegm(end_dt.timetuple())) * 1000
     total = 0
 
-    while current < end_dt:
+    while current_ms < end_ms:
         params = {
             "symbol": symbol,
             "interval": "1m",
-            "startTime": int(current.timestamp() * 1000),
-            "endTime": int(end_dt.timestamp() * 1000),
+            "startTime": current_ms,
+            "endTime": end_ms,
             "limit": batch_size,
         }
         # Fetch from Binance — no DB lock held during this HTTP request
@@ -158,13 +160,12 @@ async def fetch_and_store(
 
         # Advance past last fetched candle
         last_open_time_ms = int(raw[-1][0])
-        current = datetime.fromtimestamp(last_open_time_ms / 1000, tz=timezone.utc) + timedelta(minutes=1)
-        current = current.replace(tzinfo=None)
+        current_ms = last_open_time_ms + 60_000
 
         logger.info(
             "%s %s: fetched %d, inserted %d, up to %s",
             symbol, market_type, len(raw), inserted,
-            datetime.fromtimestamp(last_open_time_ms / 1000).strftime("%Y-%m-%d %H:%M"),
+            datetime.utcfromtimestamp(last_open_time_ms / 1000).strftime("%Y-%m-%d %H:%M"),
         )
 
         if len(raw) < batch_size:

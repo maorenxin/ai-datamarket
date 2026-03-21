@@ -14,11 +14,11 @@ The manifest contains the current list of supported symbols, intervals, and API 
 
 ---
 
-## AI ID (Optional in MVP)
+## AI ID (Paid Data Only)
 
-AI ID is **optional** during MVP. You can query data freely without one.
+AI ID is **not required** for free/public data (e.g. crypto market data).
 
-If you want usage tracking, include `?ai_id=<your-ai-id>` in API calls (first 10M data points free per AI ID). Get an AI ID at https://id.zcloak.ai
+For paid data categories (industrial chain, macro, etc.), you must provide `?ai_id=<your-ai-id>`. Each AI ID gets 1M free data points across all paid categories. Get an AI ID at https://id.zcloak.ai
 
 ---
 
@@ -33,15 +33,17 @@ If you want usage tracking, include `?ai_id=<your-ai-id>` in API calls (first 10
 
 ### Crypto OHLCV (Active)
 
+**Top 100 crypto assets** by market cap — spot + perpetual futures on 3 exchanges.
+
 **Spot symbols** (use slash format):
-- `BTC/USDT`, `ETH/USDT`, `SOL/USDT`
+- `BTC/USDT`, `ETH/USDT`, `SOL/USDT`, `BNB/USDT`, `XRP/USDT`, `DOGE/USDT`, ... (100 total)
 
 **Perpetual futures** (no slash):
-- `BTCUSDT`, `ETHUSDT`, `SOLUSDT`
+- `BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `BNBUSDT`, `XRPUSDT`, `DOGEUSDT`, ... (100 total)
 
 **Intervals:** `1m`, `5m`, `15m`, `30m`, `1h`, `2h`, `4h`, `6h`, `12h`, `1d`
 
-**Exchange:** `binance` (default)
+**Exchanges:** `binance` (default), `okx`, `bybit`
 
 ---
 
@@ -67,7 +69,7 @@ GET /v1/ohlcv?symbol=BTC/USDT&interval=1h&duration=24
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `symbol` | string | required | e.g. `BTC/USDT` (spot) or `BTCUSDT` (perp) |
-| `exchange` | string | `binance` | Exchange name |
+| `exchange` | string | `binance` | Exchange: `binance`, `okx`, `bybit` |
 | `interval` | string | `1m` | Candle interval |
 | `end_time` | string | now | End time in UTC+8: `"2025-03-03 18:04:00"` or `"2025-03-03"` |
 | `duration` | int | `60` | Number of candles to return (max 1500) |
@@ -101,11 +103,13 @@ GET /v1/ohlcv?symbol=BTC/USDT&interval=1h&duration=24
 
 ---
 
-## Token Pricing
+## Data Pricing
 
-- **Free quota:** 10,000,000 tokens per AI ID (1 token = 1 OHLCV candle)
-- **Paid:** x402 micropayment protocol (pricing TBD, testnet phase)
-- **Networks:** Arbitrum One (default), Base, Solana
+- **Free data** (crypto market OHLCV): unlimited access, no AI ID needed
+- **Paid data** (industrial chain, macro, stocks, etc.): requires AI ID
+  - Each AI ID gets **1,000,000 free tokens** across all paid categories
+  - After free quota: x402 micropayment protocol, pricing varies by category
+  - Networks: Arbitrum One (default), Base, Solana
 
 ---
 
@@ -121,17 +125,27 @@ Stock OHLCV · Company Governance · Financial Statements · EVA Data · Fund Da
 **IMPORTANT — Proxy bypass:** Always bypass proxy for localhost calls.
 
 ```bash
-# BTC/USDT spot 1h, last 24 candles
+# BTC/USDT spot 1h, last 24 candles (Binance, default)
 curl --noproxy '*' "http://localhost:8402/v1/ohlcv?symbol=BTC%2FUSDT&interval=1h&duration=24"
 
 # BTC perpetual futures 4h, last 30 candles (no slash needed)
 curl --noproxy '*' "http://localhost:8402/v1/ohlcv?symbol=BTCUSDT&interval=4h&duration=30"
+
+# ETH spot daily on OKX
+curl --noproxy '*' "http://localhost:8402/v1/ohlcv?symbol=ETH%2FUSDT&exchange=okx&interval=1d&duration=30"
+
+# SOL perp 1h on Bybit
+curl --noproxy '*' "http://localhost:8402/v1/ohlcv?symbol=SOLUSDT&exchange=bybit&interval=1h&duration=24"
 
 # ETH spot daily, ending at specific date
 curl --noproxy '*' "http://localhost:8402/v1/ohlcv?symbol=ETH%2FUSDT&interval=1d&end_time=2025-03-01&duration=30"
 
 # List supported symbols
 curl --noproxy '*' "http://localhost:8402/v1/symbols"
+
+# Check data coverage (optionally filter by exchange)
+curl --noproxy '*' "http://localhost:8402/v1/coverage"
+curl --noproxy '*' "http://localhost:8402/v1/coverage?exchange=okx"
 ```
 
 ```python

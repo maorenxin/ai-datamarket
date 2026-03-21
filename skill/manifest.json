@@ -1,7 +1,7 @@
 {
   "name": "ai-datamarket",
-  "version": "0.1.0",
-  "description": "AI Bloomberg - Access financial market data for agents",
+  "version": "0.2.0",
+  "description": "AI Bloomberg - Access financial market data for agents (multi-exchange)",
   "skill_url": "https://maorenxin.github.io/ai-datamarket/skill/SKILL.md",
   "api_base": "http://localhost:8402",
   "data_categories": [
@@ -9,14 +9,23 @@
       "id": "crypto_ohlcv",
       "name": "Crypto Market Data",
       "status": "active",
-      "symbols": ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BTCUSDT", "ETHUSDT", "SOLUSDT"],
+      "pricing": "free",
+      "symbols_count": 100,
+      "symbol_format": "BTC/USDT (spot), BTCUSDT (perp)",
       "intervals": ["1m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h", "1d"],
-      "exchanges": ["binance"]
+      "exchanges": ["binance", "okx", "bybit"]
     }
   ],
   "coming_soon": [
-    "stock_ohlcv", "futures_ohlcv", "options_data", "macro_data",
-    "fund_data", "bond_data", "index_data", "overseas_market"
+    {"id": "stock_ohlcv", "pricing": "paid"},
+    {"id": "futures_ohlcv", "pricing": "paid"},
+    {"id": "options_data", "pricing": "paid"},
+    {"id": "macro_data", "pricing": "paid"},
+    {"id": "fund_data", "pricing": "paid"},
+    {"id": "bond_data", "pricing": "paid"},
+    {"id": "index_data", "pricing": "paid"},
+    {"id": "industrial_chain", "pricing": "paid"}
   ],
-  "updated_at": "2026-03-20T00:00:00Z"
+  "paid_data_free_quota": 1000000,
+  "updated_at": "2026-03-21T00:00:00Z"
 }
