@@ -125,11 +125,12 @@ pip install "x402[httpx]" eth-account python-dotenv
 ```
 
 ### Step 2: Set your wallet private key
-Your environment needs `EVM_PRIVATE_KEY` — an Arbitrum-compatible EVM wallet with USDC balance:
+Your environment needs `EVM_PRIVATE_KEY` or `WEB3_PRIVATE_KEY` — an Arbitrum-compatible EVM wallet with USDC balance:
 ```bash
 export EVM_PRIVATE_KEY=0xYourPrivateKeyHere
+# or
+export WEB3_PRIVATE_KEY=0xYourPrivateKeyHere
 ```
-Or put it in a `.env` file in your working directory.
 
 ### Step 3: Use the x402 SDK to auto-pay
 
@@ -148,7 +149,7 @@ load_dotenv()
 
 async def query_with_payment(url: str) -> dict:
     """Query API with automatic x402 payment on 402."""
-    private_key = os.environ["EVM_PRIVATE_KEY"]
+    private_key = os.environ.get("EVM_PRIVATE_KEY") or os.environ["WEB3_PRIVATE_KEY"]
 
     # Create x402 client with EVM payment scheme
     client = x402Client()

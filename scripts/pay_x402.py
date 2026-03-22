@@ -36,12 +36,14 @@ except ImportError:
 
 
 async def main():
-    # Get private key from env
-    private_key = os.getenv("EVM_PRIVATE_KEY")
+    # Get private key from env (support both names)
+    private_key = os.getenv("EVM_PRIVATE_KEY") or os.getenv("WEB3_PRIVATE_KEY")
     if not private_key:
-        print("Error: EVM_PRIVATE_KEY environment variable not set.")
+        print("Error: EVM_PRIVATE_KEY or WEB3_PRIVATE_KEY environment variable not set.")
         print("Export your Arbitrum wallet private key (must have USDC balance):")
         print("  export EVM_PRIVATE_KEY=0x...")
+        print("  # or")
+        print("  export WEB3_PRIVATE_KEY=0x...")
         sys.exit(1)
 
     # Get URL from args
