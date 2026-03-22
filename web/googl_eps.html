@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>GOOGL EPS History</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body { background: #0a0a0f; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; padding: 40px; }
+.container { max-width: 900px; margin: 0 auto; }
+h1 { color: #f59e0b; font-size: 1.5rem; margin-bottom: 8px; }
+p { color: #94a3b8; font-size: 0.85rem; margin-bottom: 24px; }
+canvas { background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.07); padding: 16px; }
+.footer { color: #475569; font-size: 0.75rem; margin-top: 16px; text-align: center; }
+</style>
+</head><body>
+<div class="container">
+<h1>Alphabet (GOOGL) — Diluted EPS History</h1>
+<p>Source: SEC EDGAR via AI Datamarket API · 10-K (annual) + 10-Q (quarterly YTD cumulative)</p>
+<canvas id="chart"></canvas>
+<div class="footer">Data from localhost:8402/v1/earnings · Powered by AI Datamarket</div>
+</div>
+<script>
+const ctx = document.getElementById('chart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ["FY2022", "2023Q1", "2023Q2", "2023Q3", "FY2023", "2024Q1", "2024Q2", "2024Q3", "FY2024", "2025Q1", "2025Q2", "2025Q3", "FY2025"],
+        datasets: [{
+            label: 'Diluted EPS ($)',
+            data: [4.56, 1.17, 2.61, 4.16, 5.8, 1.89, 3.78, 5.9, 8.04, 2.81, 5.12, 7.99, 10.81],
+            backgroundColor: ["FY2022", "2023Q1", "2023Q2", "2023Q3", "FY2023", "2024Q1", "2024Q2", "2024Q3", "FY2024", "2025Q1", "2025Q2", "2025Q3", "FY2025"].map(l => l.startsWith('FY') ? 'rgba(245,158,11,0.8)' : 'rgba(245,158,11,0.35)'),
+            borderColor: 'rgba(245,158,11,1)',
+            borderWidth: 1,
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { labels: { color: '#94a3b8' } },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) { return 'EPS: $' + ctx.parsed.y.toFixed(2); }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: '#64748b', font: { size: 10 } },
+                grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            y: {
+                ticks: {
+                    color: '#64748b',
+                    callback: function(v) { return '$' + v.toFixed(2); }
+                },
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                title: { display: true, text: 'Diluted EPS ($)', color: '#94a3b8' }
+            }
+        }
+    }
+});
+</script>
+</body></html>

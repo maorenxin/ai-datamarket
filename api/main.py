@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes.ohlcv import router as ohlcv_router
+from api.routes.earnings import router as earnings_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,6 +35,7 @@ app.add_middleware(
 )
 
 app.include_router(ohlcv_router, prefix="/v1")
+app.include_router(earnings_router, prefix="/v1")
 
 
 @app.get("/")

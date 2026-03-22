@@ -50,13 +50,15 @@ DB_PATH = Path(__file__).parent.parent / "data" / "market.duckdb"
 
 def get_db() -> duckdb.DuckDBPyConnection:
     """Get a write connection with retry on lock contention (3 concurrent writers)."""
-    for attempt in range(50):
+    import random
+    for attempt in range(120):
         try:
             return duckdb.connect(str(DB_PATH))
         except duckdb.IOException:
-            if attempt == 49:
+            if attempt == 119:
                 raise
-            time.sleep(0.1 * (1 + attempt % 10))  # 100ms-1s jittered, up to ~5s total
+            # 0.2-2s random jitter, avoids 3 processes syncing retries
+            time.sleep(0.2 + random.random() * min(attempt * 0.1, 1.8))
 
 
 def get_checkpoint(con: duckdb.DuckDBPyConnection, symbol: str, market_type: str, exchange: str) -> Optional[datetime]:
@@ -218,11 +220,20 @@ async def live_update(exchanges: List[str]):
         for ex in exchanges:
             targets = get_targets(ex)
             for target in targets:
-                try:
-                    await backfill_target(target)
-                except Exception as e:
-                    logger.error("Error updating %s %s %s: %s",
-                                 target["exchange"], target["symbol"], target["market_type"], e)
+                for retry in range(3):
+                    try:
+                        await backfill_target(target)
+                        break
+                    except duckdb.IOException:
+                        if retry < 2:
+                            await asyncio.sleep(5)
+                        else:
+                            logger.error("Error updating %s %s %s: DuckDB lock failed after 3 retries",
+                                         target["exchange"], target["symbol"], target["market_type"])
+                    except Exception as e:
+                        logger.error("Error updating %s %s %s: %s",
+                                     target["exchange"], target["symbol"], target["market_type"], e)
+                        break
         await asyncio.sleep(60)
 
 
@@ -243,11 +254,22 @@ async def main(mode: str, exchanges: List[str], days: Optional[int], symbol: Opt
                     continue
                 logger.info("Starting backfill for %s: %d targets", ex, len(targets))
                 for t in targets:
-                    try:
-                        await backfill_target(t, days)
-                    except Exception as e:
-                        logger.error("Error backfilling %s %s %s: %s",
-                                     t["exchange"], t["symbol"], t["market_type"], e)
+                    for retry in range(3):
+                        try:
+                            await backfill_target(t, days)
+                            break  # success
+                        except duckdb.IOException as e:
+                            if retry < 2:
+                                logger.warning("%s %s %s: DuckDB lock failed, retry %d/3 in 5s",
+                                               t["exchange"], t["symbol"], t["market_type"], retry + 1)
+                                await asyncio.sleep(5)
+                            else:
+                                logger.error("%s %s %s: DuckDB lock failed after 3 retries: %s",
+                                             t["exchange"], t["symbol"], t["market_type"], e)
+                        except Exception as e:
+                            logger.error("Error backfilling %s %s %s: %s",
+                                         t["exchange"], t["symbol"], t["market_type"], e)
+                            break  # non-lock errors: don't retry
         elif mode == "live":
             await live_update(exchanges)
         else:

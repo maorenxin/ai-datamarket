@@ -26,6 +26,7 @@ DATA_CATEGORIES = {
     "bond_data":        {"is_free": False, "price_per_m": 0.50},
     "index_data":       {"is_free": False, "price_per_m": 0.30},
     "industrial_chain": {"is_free": False, "price_per_m": 2.00},
+    "stock_financials": {"is_free": False, "price_per_m": 1.00},
 }
 
 # Shared free quota for ALL paid data categories combined (per AI ID)

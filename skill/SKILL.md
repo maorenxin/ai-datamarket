@@ -115,7 +115,85 @@ GET /v1/ohlcv?symbol=BTC/USDT&interval=1h&duration=24
 
 ## Coming Soon
 
-Stock OHLCV · Company Governance · Financial Statements · EVA Data · Fund Data · Bond Data · Options · Domestic Futures · Commodities · OTC Market · Banking Data · Internet Products · Overseas Markets · Market News · Legal & Regulatory · Exhibition Info · Index Data · International Futures · Macroeconomics · Industrial Chain Data
+Stock OHLCV · Company Governance · EVA Data · Fund Data · Bond Data · Options · Domestic Futures · Commodities · OTC Market · Banking Data · Internet Products · Overseas Markets · Market News · Legal & Regulatory · Exhibition Info · Index Data · International Futures · Macroeconomics · Industrial Chain Data
+
+---
+
+## US Stock Earnings (Active — Paid)
+
+**Source:** SEC EDGAR (official US government data)
+**Coverage:** Top 10 US companies by market cap — all historical 10-K and 10-Q filings.
+
+**Companies:** AAPL, MSFT, NVDA, AMZN, GOOGL, META, BRK-B, TSLA, AVGO, LLY
+
+**Requires:** `ai_id` parameter (paid data category). Each AI ID gets 1M free tokens.
+
+### List supported companies (free)
+```
+GET /v1/earnings/companies
+```
+
+### Query earnings data
+```
+GET /v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_AI_ID
+```
+
+**Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `ticker` | string | required | AAPL, MSFT, NVDA, AMZN, GOOGL, META, BRK-B, TSLA, AVGO, LLY |
+| `form_type` | string | `all` | `10-K` (annual), `10-Q` (quarterly), or `all` |
+| `period` | string | latest | Period end date `YYYY-MM-DD` |
+| `limit` | int | `4` | Number of filings (max 40) |
+| `detail` | string | `summary` | `summary` / `statements` / `full` |
+| `ai_id` | string | required | Your zCloak AI ID |
+
+### Progressive disclosure & token cost
+
+| Detail Level | Returns | Tokens/filing |
+|-------------|---------|---------------|
+| `summary` | ~10 key metrics (revenue, net income, EPS, total assets, etc.) | 1 |
+| `statements` | All XBRL line items from financial statements | 10 |
+| `full` | Statements + complete filing text as Markdown | 100 |
+
+### Example response (summary)
+```json
+{
+  "ticker": "AAPL",
+  "company": "Apple Inc.",
+  "filings": [
+    {
+      "form_type": "10-K",
+      "filing_date": "2024-11-01",
+      "period_end": "2024-09-28",
+      "fiscal_year": 2024,
+      "summary": {
+        "revenue": 391035000000,
+        "net_income": 93736000000,
+        "eps_diluted": 6.08,
+        "total_assets": 364980000000
+      }
+    }
+  ],
+  "tokens_used": 4,
+  "tokens_remaining_free": 999996
+}
+```
+
+### Query examples
+```bash
+# Latest 4 filings for Apple (summary)
+curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_ID"
+
+# Annual reports only for NVDA
+curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=NVDA&form_type=10-K&ai_id=YOUR_ID"
+
+# Full text of a specific period
+curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=MSFT&period=2024-06-30&detail=full&ai_id=YOUR_ID"
+
+# List all supported companies (free, no ai_id needed)
+curl --noproxy '*' "http://localhost:8402/v1/earnings/companies"
+```
 
 ---
 

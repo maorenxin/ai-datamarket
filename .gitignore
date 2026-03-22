@@ -16,6 +16,9 @@ build/
 data/*.duckdb
 data/*.duckdb.wal
 
+# Earnings data (SQLite + full text, too large to commit)
+data/earnings/
+
 # macOS
 .DS_Store
 
