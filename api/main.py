@@ -6,7 +6,13 @@ Free categories (crypto OHLCV) remain open. Paid categories (earnings)
 require zCloak AI ID with free quota, then x402 payment.
 """
 import logging
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load settler wallet key from openclaw env
+load_dotenv(os.path.expanduser("~/.openclaw/.env"))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

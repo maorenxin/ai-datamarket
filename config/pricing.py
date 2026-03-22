@@ -55,11 +55,11 @@ def get_price_per_m(category: str) -> Optional[float]:
 # ---------------------------------------------------------------------------
 # x402 payment configuration
 # ---------------------------------------------------------------------------
-X402_FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402"  # mainnet
+X402_FACILITATOR_URL = "https://x402.org/facilitator"  # public x402 facilitator
 X402_PAY_TO_EVM = "0xcd01585e3a8fa9a9cb01d91bc39948dff88d9761"
 
-# Supported blockchain networks (default: Arbitrum for low fees)
-X402_DEFAULT_NETWORK = "eip155:42161"  # Arbitrum One
+# Supported blockchain networks (default: Arbitrum One for low fees)
+X402_DEFAULT_NETWORK = "eip155:42161"  # Arbitrum One (CAIP-2 format for x402 V2)
 
 X402_SUPPORTED_NETWORKS = {
     "arbitrum":     "eip155:42161",    # Arbitrum One (default — fast & cheap)

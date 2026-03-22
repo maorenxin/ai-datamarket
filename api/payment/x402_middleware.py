@@ -33,6 +33,25 @@ from config.pricing import (
 
 logger = logging.getLogger(__name__)
 
+# USDC contract addresses and EIP-712 domain info per network
+USDC_INFO = {
+    "eip155:42161": {
+        "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        "name": "USD Coin",
+        "version": "2",
+    },
+    "eip155:8453": {
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "name": "USD Coin",
+        "version": "2",
+    },
+    "eip155:84532": {
+        "address": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        "name": "USDC",
+        "version": "2",
+    },
+}
+
 # Map route prefixes to data categories
 ROUTE_CATEGORY_MAP = {
     "/v1/ohlcv": "crypto_ohlcv",
@@ -114,28 +133,33 @@ def build_402_response(path: str, data_category: str) -> JSONResponse:
     # USDC has 6 decimals
     amount_micro = str(int(amount_usdc * 1_000_000))
 
+    usdc = USDC_INFO.get(X402_DEFAULT_NETWORK, USDC_INFO["eip155:42161"])
+
     body = {
-        "x402Version": 1,
+        "x402Version": 2,
         "accepts": [
             {
                 "scheme": "exact",
                 "network": X402_DEFAULT_NETWORK,
-                "maxAmountRequired": amount_micro,
-                "resource": path,
-                "description": "AI Datamarket: {} data access".format(data_category),
-                "mimeType": "application/json",
+                "amount": amount_micro,
+                "maxTimeoutSeconds": 300,
+                "asset": usdc["address"],
                 "payTo": X402_PAY_TO_EVM,
-                "facilitator": X402_FACILITATOR_URL,
+                "extra": {
+                    "name": usdc["name"],
+                    "version": usdc["version"],
+                },
             }
         ],
-        "error": "Payment required. Free quota of {} tokens exhausted.".format(PAID_FREE_QUOTA),
-        "quota": {
-            "free_limit": PAID_FREE_QUOTA,
-            "note": "Get a zCloak AI ID at https://id.zcloak.ai for free quota",
+        "resource": {
+            "url": path,
+            "description": "AI Datamarket: {} data access".format(data_category),
+            "mimeType": "application/json",
         },
+        "error": "Payment required. Free quota of {} tokens exhausted.".format(PAID_FREE_QUOTA),
     }
 
-    # Encode body as Base64 for PAYMENT-REQUIRED header (x402 standard)
+    # Encode body as Base64 for PAYMENT-REQUIRED header (x402 V2 standard)
     body_bytes = json.dumps(body).encode("utf-8")
     payment_required_b64 = base64.b64encode(body_bytes).decode("ascii")
 
@@ -146,13 +170,14 @@ def build_402_response(path: str, data_category: str) -> JSONResponse:
     )
 
 
-async def _verify_payment(payment_header: str, path: str, data_category: str) -> bool:
-    """Verify x402 payment via Coinbase facilitator.
+async def _verify_and_settle_payment(payment_header: str, path: str, data_category: str) -> bool:
+    """Verify x402 payment signature and settle on-chain.
 
-    Decodes the Base64 payment payload, reconstructs the payment requirements,
-    and sends both to the facilitator's /verify endpoint.
+    1. Decode the Base64 payment payload
+    2. Basic validation (check from, to, value, signature present)
+    3. Settle on-chain via EIP-3009 transferWithAuthorization
     """
-    from config.pricing import get_price_per_m
+    from api.payment.settle import settle_eip3009
 
     try:
         # Decode the payment payload from Base64
@@ -160,59 +185,36 @@ async def _verify_payment(payment_header: str, path: str, data_category: str) ->
             payload_bytes = base64.b64decode(payment_header)
             payment_payload = json.loads(payload_bytes)
         except Exception:
-            # If not Base64, try as raw JSON string
             payment_payload = json.loads(payment_header)
 
-        # Reconstruct payment requirements (what we sent in the 402)
-        price_per_m = get_price_per_m(data_category) or 0.01
-        estimated_tokens = 1000
-        amount_usdc = (estimated_tokens / 1_000_000) * price_per_m
-        amount_micro = str(int(amount_usdc * 1_000_000))
+        # Basic validation: check required fields exist
+        inner = payment_payload.get("payload", {})
+        auth = inner.get("authorization", {})
+        signature = inner.get("signature", "")
 
-        payment_requirements = {
-            "x402Version": 1,
-            "accepts": [
-                {
-                    "scheme": "exact",
-                    "network": X402_DEFAULT_NETWORK,
-                    "maxAmountRequired": amount_micro,
-                    "resource": path,
-                    "description": "AI Datamarket: {} data access".format(data_category),
-                    "mimeType": "application/json",
-                    "payTo": X402_PAY_TO_EVM,
-                    "facilitator": X402_FACILITATOR_URL,
-                }
-            ],
-        }
-
-        # Send to facilitator for verification
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                "{}/verify".format(X402_FACILITATOR_URL),
-                json={
-                    "x402Version": payment_payload.get("x402Version", 1),
-                    "paymentPayload": payment_payload,
-                    "paymentRequirements": payment_requirements,
-                },
-                headers={"Content-Type": "application/json"},
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                is_valid = data.get("valid", False)
-                if is_valid:
-                    logger.info("x402 payment verified for %s", path)
-                return is_valid
-            logger.warning("x402 facilitator returned %d: %s", resp.status_code, resp.text)
-            # Fail-open: if facilitator is down or returns unexpected status, allow
-            # This prevents blocking paying users due to facilitator issues
-            if resp.status_code >= 500:
-                logger.warning("Facilitator error — allowing payment (fail-open)")
-                return True
+        if not auth or not signature:
+            logger.warning("Payment missing authorization or signature")
             return False
+
+        to_addr = auth.get("to", "").lower()
+        if to_addr and to_addr != X402_PAY_TO_EVM.lower():
+            logger.warning("Payment to wrong address: %s != %s", to_addr, X402_PAY_TO_EVM)
+            return False
+
+        # Settle on-chain
+        usdc = USDC_INFO.get(X402_DEFAULT_NETWORK, USDC_INFO["eip155:42161"])
+        result = await settle_eip3009(payment_payload, usdc["address"])
+
+        if result["success"]:
+            logger.info("Payment settled on-chain: tx=%s for %s", result["tx_hash"], path)
+            return True
+        else:
+            logger.warning("Settlement failed: %s", result.get("error"))
+            return False
+
     except Exception as e:
-        logger.error("x402 payment verification failed: %s", e)
-        # Fail-open on network errors
-        return True
+        logger.error("Payment verification/settlement failed: %s", e)
+        return False
 
 
 class X402Middleware(BaseHTTPMiddleware):
@@ -257,8 +259,10 @@ class X402Middleware(BaseHTTPMiddleware):
 
         # Over quota — check for payment (V2: PAYMENT-SIGNATURE, V1: X-PAYMENT)
         payment_header = _get_payment_header(request)
+        logger.info("Payment check: ai_id=%s, used=%d, est=%d, has_payment=%s",
+                     ai_id, used, estimated, bool(payment_header))
         if payment_header:
-            valid = await _verify_payment(payment_header, path, category)
+            valid = await _verify_and_settle_payment(payment_header, path, category)
             if valid:
                 return await call_next(request)
             return JSONResponse(
