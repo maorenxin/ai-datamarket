@@ -117,89 +117,63 @@ GET /v1/ohlcv?symbol=BTC/USDT&interval=1h&duration=24
 
 When your free quota (1K tokens) is exhausted, the API returns **HTTP 402** with x402 payment requirements.
 
-**You MUST handle 402 responses automatically.** Here's how:
+**You MUST handle 402 responses automatically.** Follow these steps:
 
-### 1. Install x402 SDK
+### Step 1: Install dependencies
 ```bash
-pip install x402[httpx]
+pip install "x402[httpx]" eth-account python-dotenv
 ```
 
-### 2. Set your wallet private key
-The agent environment must have `WEB3_PRIVATE_KEY` set (Arbitrum-compatible EVM wallet with USDC balance):
+### Step 2: Set your wallet private key
+Your environment needs `EVM_PRIVATE_KEY` — an Arbitrum-compatible EVM wallet with USDC balance:
 ```bash
-export WEB3_PRIVATE_KEY=0xYourPrivateKeyHere
+export EVM_PRIVATE_KEY=0xYourPrivateKeyHere
 ```
+Or put it in a `.env` file in your working directory.
 
-### 3. Handle 402 automatically
+### Step 3: Use the x402 SDK to auto-pay
 
-When you receive HTTP 402, the response body contains payment requirements. Use the x402 SDK to sign a payment and retry:
+The x402 SDK's `x402HttpxClient` automatically intercepts 402 responses, signs a USDC payment, and retries the request. You do NOT need to manually parse the 402 body or construct headers.
 
 ```python
-import base64, json, os
-import httpx
-from x402.types import PaymentRequirements
-from x402.clients.httpx import x402_payment_required
-
-def query_with_payment(url: str) -> dict:
-    """Query API with automatic x402 payment on 402."""
-    resp = httpx.get(url)
-    if resp.status_code == 402:
-        # Parse payment requirements from response body
-        requirements = resp.json()
-        accept = requirements["accepts"][0]
-
-        # Use x402 SDK to create payment
-        private_key = os.environ["WEB3_PRIVATE_KEY"]
-        from x402.clients.httpx import x402_payment_required
-
-        # Create an x402-enabled client and retry
-        client = httpx.Client()
-        payment = x402_payment_required(
-            client,
-            private_key=private_key,
-        )
-        # Retry with PAYMENT-SIGNATURE header
-        resp = payment.get(url)
-    return resp.json()
-```
-
-### Alternative: manual payment header construction
-
-If the x402 SDK doesn't work in your environment, construct the payment manually:
-
-```python
-import base64, json, os, httpx
+import asyncio, json, os
+from dotenv import load_dotenv
 from eth_account import Account
-from eth_account.messages import encode_defunct
+from x402 import x402Client
+from x402.http.clients import x402HttpxClient
+from x402.mechanisms.evm import EthAccountSigner
+from x402.mechanisms.evm.exact.register import register_exact_evm_client
 
-def pay_and_retry(url: str, requirements_body: dict) -> httpx.Response:
-    """Sign x402 payment and retry request."""
-    accept = requirements_body["accepts"][0]
-    private_key = os.environ["WEB3_PRIVATE_KEY"]
+load_dotenv()
 
-    # Build payment payload
-    payload = {
-        "x402Version": 1,
-        "scheme": "exact",
-        "network": accept["network"],
-        "payload": {
-            "signature": "",  # will be filled
-            "authorization": {
-                "from": Account.from_key(private_key).address,
-                "to": accept["payTo"],
-                "value": accept["maxAmountRequired"],
-            }
-        }
-    }
+async def query_with_payment(url: str) -> dict:
+    """Query API with automatic x402 payment on 402."""
+    private_key = os.environ["EVM_PRIVATE_KEY"]
 
-    # Sign the payload
-    msg = encode_defunct(text=json.dumps(payload["payload"]["authorization"], sort_keys=True))
-    signed = Account.sign_message(msg, private_key=private_key)
-    payload["payload"]["signature"] = signed.signature.hex()
+    # Create x402 client with EVM payment scheme
+    client = x402Client()
+    account = Account.from_key(private_key)
+    register_exact_evm_client(client, EthAccountSigner(account))
 
-    # Base64 encode and send as PAYMENT-SIGNATURE header
-    payment_b64 = base64.b64encode(json.dumps(payload).encode()).decode()
-    return httpx.get(url, headers={"PAYMENT-SIGNATURE": payment_b64})
+    # x402HttpxClient auto-handles: 402 → sign USDC payment → retry
+    async with x402HttpxClient(client) as http:
+        response = await http.get(url)
+        await response.aread()
+        return response.json()
+
+# Example usage
+data = asyncio.run(query_with_payment(
+    "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_AI_ID&limit=1"
+))
+print(json.dumps(data, indent=2))
+```
+
+### Alternative: use the helper script
+
+A ready-made script is included in the repo:
+```bash
+export EVM_PRIVATE_KEY=0xYourPrivateKeyHere
+python3 scripts/pay_x402.py "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_AI_ID&limit=1"
 ```
 
 ### Payment details
