@@ -1,12 +1,14 @@
 """
-SEC EDGAR Earnings Crawler — fetch 10-K/10-Q filings for US Top 10 companies.
+SEC EDGAR Earnings Crawler — fetch 10-K/10-Q filings for US public companies.
 
 Two phases:
 1. Structured data: submissions JSON → filing list, companyfacts JSON → XBRL facts → SQLite
 2. Full text: filing HTML → html2text → gzip Markdown → filesystem
 
 Usage:
-    python crawler/earnings_crawler.py                    # All 10 companies
+    python crawler/earnings_crawler.py                    # Top 10 companies
+    python crawler/earnings_crawler.py --all              # ALL SEC-listed companies (~10K)
+    python crawler/earnings_crawler.py --top 500          # Top N by market cap
     python crawler/earnings_crawler.py --ticker AAPL      # Single company
     python crawler/earnings_crawler.py --skip-full-text   # Skip HTML download
 """
@@ -44,6 +46,40 @@ logger = logging.getLogger(__name__)
 # Rate limiting: SEC allows 10 req/sec, we stay under with semaphore + delay
 CONCURRENCY = 8
 REQUEST_DELAY = 0.12  # seconds between requests
+
+SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
+
+
+# ---------------------------------------------------------------------------
+# Dynamic company list from SEC
+# ---------------------------------------------------------------------------
+
+def fetch_all_companies(top_n: int = 0) -> Dict[str, Dict[str, str]]:
+    """Fetch full company list from SEC EDGAR. Returns {ticker: {name, cik}}.
+    The SEC list is roughly ordered by market cap.
+    If top_n > 0, return only the first N companies.
+    """
+    import httpx as httpx_sync
+    resp = httpx_sync.get(
+        SEC_TICKERS_URL,
+        headers={"User-Agent": SEC_USER_AGENT},
+        timeout=30.0,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    companies = {}
+    for entry in data.values():
+        ticker = entry["ticker"]
+        cik_raw = entry["cik_str"]
+        cik = str(cik_raw).zfill(10)
+        name = entry["title"]
+        companies[ticker] = {"name": name, "cik": cik}
+        if top_n > 0 and len(companies) >= top_n:
+            break
+
+    logger.info("Fetched %d companies from SEC EDGAR", len(companies))
+    return companies
 
 
 # ---------------------------------------------------------------------------
@@ -392,16 +428,13 @@ async def crawl_company(
     sem: asyncio.Semaphore,
     con: sqlite3.Connection,
     ticker: str,
+    company_info: Dict[str, str],
     skip_full_text: bool = False,
 ):
     """Crawl one company end-to-end."""
-    info = COMPANIES.get(ticker)
-    if not info:
-        logger.error("Unknown ticker: %s", ticker)
-        return
-
-    cik = info["cik"]
-    logger.info("=== %s (%s) CIK=%s ===", ticker, info["name"], cik)
+    cik = company_info["cik"]
+    name = company_info.get("name", ticker)
+    logger.info("=== %s (%s) CIK=%s ===", ticker, name, cik)
 
     await crawl_structured(client, sem, con, ticker, cik)
 
@@ -409,33 +442,77 @@ async def crawl_company(
         await crawl_full_text(client, sem, con, ticker, cik)
 
 
-async def main(ticker: Optional[str] = None, skip_full_text: bool = False):
+async def main(
+    ticker: Optional[str] = None,
+    skip_full_text: bool = False,
+    all_companies: bool = False,
+    top_n: int = 0,
+):
     con = init_db()
 
     headers = {"User-Agent": SEC_USER_AGENT, "Accept-Encoding": "gzip, deflate"}
     sem = asyncio.Semaphore(CONCURRENCY)
+
+    # Determine company list
+    if ticker:
+        # Single ticker — check hardcoded first, then fetch from SEC
+        info = COMPANIES.get(ticker.upper())
+        if not info:
+            all_cos = fetch_all_companies()
+            info = all_cos.get(ticker.upper())
+        if not info:
+            logger.error("Unknown ticker: %s", ticker)
+            con.close()
+            return
+        targets = {ticker.upper(): info}
+    elif all_companies or top_n > 0:
+        targets = fetch_all_companies(top_n=top_n)
+    else:
+        targets = COMPANIES
+
+    logger.info("Crawling %d companies (skip_full_text=%s)", len(targets), skip_full_text)
 
     async with httpx.AsyncClient(
         headers=headers,
         timeout=httpx.Timeout(30.0, connect=10.0),
         follow_redirects=True,
     ) as client:
-        if ticker:
-            await crawl_company(client, sem, con, ticker.upper(), skip_full_text)
-        else:
-            for t in COMPANIES:
-                await crawl_company(client, sem, con, t, skip_full_text)
+        done = 0
+        for t, info in targets.items():
+            # Skip if already has filings (resume support)
+            existing = con.execute(
+                "SELECT COUNT(*) FROM filings WHERE ticker=?", (t,)
+            ).fetchone()[0]
+            if existing > 0:
+                logger.info("%s: already has %d filings, skipping", t, existing)
+                done += 1
+                continue
+
+            await crawl_company(client, sem, con, t, info, skip_full_text)
+            done += 1
+            if done % 100 == 0:
+                logger.info("Progress: %d/%d companies done", done, len(targets))
+
+    # Final stats
+    total_filings = con.execute("SELECT COUNT(*) FROM filings").fetchone()[0]
+    total_facts = con.execute("SELECT COUNT(*) FROM financial_facts").fetchone()[0]
+    total_tickers = con.execute("SELECT COUNT(DISTINCT ticker) FROM filings").fetchone()[0]
+    logger.info("Done. %d companies, %d filings, %d facts in database.",
+                total_tickers, total_filings, total_facts)
 
     con.close()
-    logger.info("Done.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SEC EDGAR Earnings Crawler")
     parser.add_argument("--ticker", type=str, default=None,
                         help="Crawl single ticker (e.g. AAPL)")
+    parser.add_argument("--all", action="store_true", dest="all_companies",
+                        help="Crawl ALL SEC-listed companies (~10K)")
+    parser.add_argument("--top", type=int, default=0,
+                        help="Crawl top N companies by market cap (e.g. --top 500)")
     parser.add_argument("--skip-full-text", action="store_true",
                         help="Skip downloading filing full text (HTML → Markdown)")
     args = parser.parse_args()
 
-    asyncio.run(main(args.ticker, args.skip_full_text))
+    asyncio.run(main(args.ticker, args.skip_full_text, args.all_companies, args.top))
