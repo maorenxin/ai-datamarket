@@ -18,7 +18,7 @@ The manifest contains the current list of supported symbols, intervals, and API 
 
 AI ID is **not required** for free/public data (e.g. crypto market data).
 
-For paid data categories (industrial chain, macro, etc.), you must provide `?ai_id=<your-ai-id>`. Each AI ID gets 1M free data points across all paid categories. Get an AI ID at https://id.zcloak.ai
+For paid data categories (industrial chain, macro, etc.), you must provide `?ai_id=<your-ai-id>`. Each AI ID gets 1K free data points across all paid categories. Get an AI ID at https://id.zcloak.ai
 
 ---
 
@@ -90,7 +90,7 @@ GET /v1/ohlcv?symbol=BTC/USDT&interval=1h&duration=24
     ...
   ],
   "tokens_used": 24,
-  "tokens_remaining_free": 9999976
+  "tokens_remaining_free": 976
 }
 ```
 
@@ -107,9 +107,107 @@ GET /v1/ohlcv?symbol=BTC/USDT&interval=1h&duration=24
 
 - **Free data** (crypto market OHLCV): unlimited access, no AI ID needed
 - **Paid data** (industrial chain, macro, stocks, etc.): requires AI ID
-  - Each AI ID gets **1,000,000 free tokens** across all paid categories
-  - After free quota: x402 micropayment protocol, pricing varies by category
+  - Each AI ID gets **1,000 free tokens** across all paid categories (debug quota)
+  - After free quota: x402 micropayment protocol (see Payment section below)
   - Networks: Arbitrum One (default), Base, Solana
+
+---
+
+## Payment (x402 Protocol)
+
+When your free quota (1K tokens) is exhausted, the API returns **HTTP 402** with x402 payment requirements.
+
+**You MUST handle 402 responses automatically.** Here's how:
+
+### 1. Install x402 SDK
+```bash
+pip install x402[httpx]
+```
+
+### 2. Set your wallet private key
+The agent environment must have `WEB3_PRIVATE_KEY` set (Arbitrum-compatible EVM wallet with USDC balance):
+```bash
+export WEB3_PRIVATE_KEY=0xYourPrivateKeyHere
+```
+
+### 3. Handle 402 automatically
+
+When you receive HTTP 402, the response body contains payment requirements. Use the x402 SDK to sign a payment and retry:
+
+```python
+import base64, json, os
+import httpx
+from x402.types import PaymentRequirements
+from x402.clients.httpx import x402_payment_required
+
+def query_with_payment(url: str) -> dict:
+    """Query API with automatic x402 payment on 402."""
+    resp = httpx.get(url)
+    if resp.status_code == 402:
+        # Parse payment requirements from response body
+        requirements = resp.json()
+        accept = requirements["accepts"][0]
+
+        # Use x402 SDK to create payment
+        private_key = os.environ["WEB3_PRIVATE_KEY"]
+        from x402.clients.httpx import x402_payment_required
+
+        # Create an x402-enabled client and retry
+        client = httpx.Client()
+        payment = x402_payment_required(
+            client,
+            private_key=private_key,
+        )
+        # Retry with PAYMENT-SIGNATURE header
+        resp = payment.get(url)
+    return resp.json()
+```
+
+### Alternative: manual payment header construction
+
+If the x402 SDK doesn't work in your environment, construct the payment manually:
+
+```python
+import base64, json, os, httpx
+from eth_account import Account
+from eth_account.messages import encode_defunct
+
+def pay_and_retry(url: str, requirements_body: dict) -> httpx.Response:
+    """Sign x402 payment and retry request."""
+    accept = requirements_body["accepts"][0]
+    private_key = os.environ["WEB3_PRIVATE_KEY"]
+
+    # Build payment payload
+    payload = {
+        "x402Version": 1,
+        "scheme": "exact",
+        "network": accept["network"],
+        "payload": {
+            "signature": "",  # will be filled
+            "authorization": {
+                "from": Account.from_key(private_key).address,
+                "to": accept["payTo"],
+                "value": accept["maxAmountRequired"],
+            }
+        }
+    }
+
+    # Sign the payload
+    msg = encode_defunct(text=json.dumps(payload["payload"]["authorization"], sort_keys=True))
+    signed = Account.sign_message(msg, private_key=private_key)
+    payload["payload"]["signature"] = signed.signature.hex()
+
+    # Base64 encode and send as PAYMENT-SIGNATURE header
+    payment_b64 = base64.b64encode(json.dumps(payload).encode()).decode()
+    return httpx.get(url, headers={"PAYMENT-SIGNATURE": payment_b64})
+```
+
+### Payment details
+- **Network:** Arbitrum One (`eip155:42161`)
+- **Token:** USDC (6 decimals)
+- **Price:** 0.10 USDC per 1M tokens
+- **Pay-to address:** `0xcd01585e3a8fa9a9cb01d91bc39948dff88d9761`
+- **Facilitator:** Coinbase x402 (`https://api.cdp.coinbase.com/platform/v2/x402`)
 
 ---
 
@@ -126,7 +224,7 @@ Stock OHLCV · Company Governance · EVA Data · Fund Data · Bond Data · Optio
 
 **Companies:** AAPL, MSFT, NVDA, AMZN, GOOGL, META, BRK-B, TSLA, AVGO, LLY
 
-**Requires:** `ai_id` parameter (paid data category). Each AI ID gets 1M free tokens.
+**Requires:** `ai_id` parameter (paid data category). Each AI ID gets 1K free tokens.
 
 ### List supported companies (free)
 ```
@@ -176,7 +274,7 @@ GET /v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_AI_ID
     }
   ],
   "tokens_used": 4,
-  "tokens_remaining_free": 999996
+  "tokens_remaining_free": 996
 }
 ```
 

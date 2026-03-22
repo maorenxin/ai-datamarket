@@ -18,19 +18,19 @@ DATA_CATEGORIES = {
     "crypto_ohlcv":     {"is_free": True},
 
     # ── Future paid categories ──
-    "stock_ohlcv":      {"is_free": False, "price_per_m": 0.50},
-    "futures_ohlcv":    {"is_free": False, "price_per_m": 0.50},
-    "macro_data":       {"is_free": False, "price_per_m": 1.00},
-    "options_data":     {"is_free": False, "price_per_m": 0.80},
-    "fund_data":        {"is_free": False, "price_per_m": 0.50},
-    "bond_data":        {"is_free": False, "price_per_m": 0.50},
-    "index_data":       {"is_free": False, "price_per_m": 0.30},
-    "industrial_chain": {"is_free": False, "price_per_m": 2.00},
-    "stock_financials": {"is_free": False, "price_per_m": 1.00},
+    "stock_ohlcv":      {"is_free": False, "price_per_m": 0.10},
+    "futures_ohlcv":    {"is_free": False, "price_per_m": 0.10},
+    "macro_data":       {"is_free": False, "price_per_m": 0.10},
+    "options_data":     {"is_free": False, "price_per_m": 0.10},
+    "fund_data":        {"is_free": False, "price_per_m": 0.10},
+    "bond_data":        {"is_free": False, "price_per_m": 0.10},
+    "index_data":       {"is_free": False, "price_per_m": 0.10},
+    "industrial_chain": {"is_free": False, "price_per_m": 0.10},
+    "stock_financials": {"is_free": False, "price_per_m": 0.10},
 }
 
 # Shared free quota for ALL paid data categories combined (per AI ID)
-PAID_FREE_QUOTA = 1_000_000  # 1M tokens
+PAID_FREE_QUOTA = 1_000  # 1K tokens (low for debugging, raise for production)
 
 # ---------------------------------------------------------------------------
 # Helper functions
@@ -56,7 +56,7 @@ def get_price_per_m(category: str) -> Optional[float]:
 # x402 payment configuration
 # ---------------------------------------------------------------------------
 X402_FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402"  # mainnet
-X402_PAY_TO_EVM = "0xYourEvmAddress"   # TODO: fill before production
+X402_PAY_TO_EVM = "0xcd01585e3a8fa9a9cb01d91bc39948dff88d9761"
 
 # Supported blockchain networks (default: Arbitrum for low fees)
 X402_DEFAULT_NETWORK = "eip155:42161"  # Arbitrum One

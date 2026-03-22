@@ -19,6 +19,11 @@ data/*.duckdb.wal
 # Earnings data (SQLite + full text, too large to commit)
 data/earnings/
 
+# Token usage tracking (runtime data)
+data/usage.db
+data/usage.db-shm
+data/usage.db-wal
+
 # macOS
 .DS_Store
 

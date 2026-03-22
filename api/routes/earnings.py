@@ -20,6 +20,7 @@ from config.earnings import (
     SUMMARY_METRICS,
 )
 from config.pricing import PAID_FREE_QUOTA
+from api.db.usage import count_tokens as _count_tokens, add_tokens as _add_tokens
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -39,42 +40,6 @@ def _get_db() -> sqlite3.Connection:
     con = sqlite3.connect(str(EARNINGS_DB_PATH), check_same_thread=False)
     con.row_factory = sqlite3.Row
     return con
-
-
-def _count_tokens(ai_id: str) -> int:
-    """Return total tokens used by this AI ID (from DuckDB ai_id_usage table).
-    Returns 0 if DuckDB is locked (crawlers running)."""
-    try:
-        from api.db.duckdb_client import get_write_con
-        ddb = get_write_con()
-        try:
-            row = ddb.execute(
-                "SELECT total_tokens FROM ai_id_usage WHERE ai_id=?", [ai_id]
-            ).fetchone()
-            return row[0] if row else 0
-        finally:
-            ddb.close()
-    except Exception:
-        logger.warning("DuckDB locked, skipping token count for %s", ai_id)
-        return 0
-
-
-def _add_tokens(ai_id: str, tokens: int):
-    """Increment token usage for an AI ID (in DuckDB).
-    Silently skips if DuckDB is locked."""
-    try:
-        from api.db.duckdb_client import get_write_con
-        ddb = get_write_con()
-        try:
-            ddb.execute(
-                """INSERT INTO ai_id_usage (ai_id, total_tokens) VALUES (?, ?)
-                   ON CONFLICT (ai_id) DO UPDATE SET total_tokens = total_tokens + excluded.total_tokens""",
-                [ai_id, tokens],
-            )
-        finally:
-            ddb.close()
-    except Exception:
-        logger.warning("DuckDB locked, skipping token tracking for %s", ai_id)
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +154,14 @@ async def get_earnings(
         raise HTTPException(
             status_code=401,
             detail="ai_id is required for earnings data (paid category). Get one free at https://id.zcloak.ai",
+        )
+
+    # Verify AI ID with zCloak
+    from api.auth.zcloak import verify_ai_id
+    if not await verify_ai_id(ai_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid or unrecognized AI ID '{}'. Register at https://id.zcloak.ai".format(ai_id),
         )
 
     # Validate ticker

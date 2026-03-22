@@ -20,7 +20,7 @@
       "name": "US Stock Earnings (SEC EDGAR)",
       "status": "active",
       "pricing": "paid",
-      "companies_count": 10,
+      "companies_count": 6969,
       "forms": ["10-K", "10-Q"],
       "detail_levels": ["summary", "statements", "full"],
       "source": "SEC EDGAR"
@@ -36,6 +36,6 @@
     {"id": "index_data", "pricing": "paid"},
     {"id": "industrial_chain", "pricing": "paid"}
   ],
-  "paid_data_free_quota": 1000000,
+  "paid_data_free_quota": 1000,
   "updated_at": "2026-03-21T00:00:00Z"
 }
