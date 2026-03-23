@@ -44,33 +44,26 @@ def verify_onchain_signature(signed_content: str) -> Tuple[bool, str, Optional[s
         logger.warning("verify message failed: %s", err)
         return False, err, None
 
-    # Parse output — look for verification result
-    # Expected output contains signer principal and verification status
+    # Parse output — zcloak-ai verify message returns Candid record + signer info
+    # Success: stdout contains the event record with ai_id and "Agent Principal: ..."
+    # Failure: non-zero exit code (handled above)
     lines = stdout.split("\n")
     signer_id = None
-    verified = False
 
     for line in lines:
-        lower = line.lower()
-        # Look for signer/principal info
-        if "principal" in lower or "signer" in lower:
-            # Extract the ID value — typically after a colon or equals
-            for sep in [":", "="]:
-                if sep in line:
-                    val = line.split(sep, 1)[1].strip()
-                    if val:
-                        signer_id = val
-                        break
-        # Look for verification success indicators
-        if "verified" in lower or "valid" in lower or "success" in lower:
-            if "not" not in lower and "invalid" not in lower and "fail" not in lower:
-                verified = True
+        stripped = line.strip()
+        # "Agent Principal: a5mqj-eyzt5-..." in signer info section
+        if stripped.startswith("Agent Principal:"):
+            signer_id = stripped.split(":", 1)[1].strip()
+            break
+        # Fallback: ai_id = "..." in Candid record
+        if stripped.startswith('ai_id = "') and not signer_id:
+            signer_id = stripped.split('"')[1]
 
-    if verified and signer_id:
+    if signer_id:
         return True, "Signature verified", signer_id
-    elif verified:
-        # Verified but couldn't parse signer — still treat as success
-        # The caller should do additional checks
+    elif stdout:
+        # CLI returned 0 with output but we couldn't parse signer
         return True, "Signature verified (signer not parsed from output)", None
     else:
         return False, "Signature verification failed. Output: {}".format(stdout[:200]), None
