@@ -15,13 +15,13 @@ def get_con() -> duckdb.DuckDBPyConnection:
     The crawler holds write locks briefly between HTTP fetches — we retry
     aggressively to slip in during the gap.
     """
-    for attempt in range(40):
+    for attempt in range(200):
         try:
             return duckdb.connect(str(DB_PATH), read_only=True)
         except duckdb.IOException:
-            if attempt == 39:
+            if attempt == 199:
                 raise
-            time.sleep(0.02 * (1 + attempt % 5))  # 20-100ms jittered retry, up to ~2s total
+            time.sleep(0.05 * (1 + attempt % 10))  # 50-500ms jittered retry, up to ~10s total
 
 
 def get_write_con() -> duckdb.DuckDBPyConnection:

@@ -14,11 +14,39 @@ The manifest contains the current list of supported symbols, intervals, and API 
 
 ---
 
-## AI ID (Paid Data Only)
+## Authentication (Paid Data)
 
-AI ID is **not required** for free/public data (e.g. crypto market data).
+Paid endpoints (e.g. earnings) require **Bearer token** authentication. Free data (crypto OHLCV) needs no auth.
 
-For paid data categories (industrial chain, macro, etc.), you must provide `?ai_id=<your-ai-id>`. Each AI ID gets 1K free data points across all paid categories. Get an AI ID at https://id.zcloak.ai
+### One-time setup: register with on-chain signature
+
+```bash
+# 1. Get your AI ID
+AI_ID=$(zcloak-ai register get-principal 2>/dev/null | grep "Principal ID:" | awk '{print $3}')
+
+# 2. Sign an auth message on-chain (proves you hold the private key)
+TIMESTAMP=$(date +%s)
+zcloak-ai sign agreement "ai-datamarket-auth:${AI_ID}:${TIMESTAMP}"
+# Note the event_id from the output
+
+# 3. Register with the API to get a bearer token
+curl -X POST http://localhost:8402/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d "{\"ai_id\":\"${AI_ID}\",\"event_id\":\"EVENT_ID_FROM_STEP_2\",\"signed_content\":\"ai-datamarket-auth:${AI_ID}:${TIMESTAMP}\"}"
+# Returns: {"token": "abc123...", "ai_id": "..."}
+```
+
+### Use the token for all paid requests
+
+```bash
+curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Notes:**
+- Token does not expire (MVP). You can re-register to get a new token (old one is revoked).
+- Requires `zcloak-ai` CLI: `npm install -g @zcloak/ai-agent@latest`
+- Each AI ID gets **1,000 free tokens** across all paid categories. After that: x402 micropayment.
 
 ---
 
@@ -105,8 +133,8 @@ GET /v1/ohlcv?symbol=BTC/USDT&interval=1h&duration=24
 
 ## Data Pricing
 
-- **Free data** (crypto market OHLCV): unlimited access, no AI ID needed
-- **Paid data** (industrial chain, macro, stocks, etc.): requires AI ID
+- **Free data** (crypto market OHLCV): unlimited access, no auth needed
+- **Paid data** (industrial chain, macro, stocks, etc.): requires Bearer token (see Authentication section)
   - Each AI ID gets **1,000 free tokens** across all paid categories (debug quota)
   - After free quota: x402 micropayment protocol (see Payment section below)
   - Networks: Arbitrum One (default), Base, Solana
@@ -158,13 +186,13 @@ async def query_with_payment(url: str) -> dict:
 
     # x402HttpxClient auto-handles: 402 → sign USDC payment → retry
     async with x402HttpxClient(client) as http:
-        response = await http.get(url)
+        response = await http.get(url, headers={"Authorization": "Bearer YOUR_TOKEN"})
         await response.aread()
         return response.json()
 
 # Example usage
 data = asyncio.run(query_with_payment(
-    "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_AI_ID&limit=1"
+    "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary&limit=1"
 ))
 print(json.dumps(data, indent=2))
 ```
@@ -174,7 +202,7 @@ print(json.dumps(data, indent=2))
 A ready-made script is included in the repo:
 ```bash
 export EVM_PRIVATE_KEY=0xYourPrivateKeyHere
-python3 scripts/pay_x402.py "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_AI_ID&limit=1"
+python3 scripts/pay_x402.py "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary&limit=1" --token YOUR_BEARER_TOKEN
 ```
 
 ### Payment details
@@ -205,7 +233,7 @@ Stock OHLCV · Company Governance · EVA Data · Fund Data · Bond Data · Optio
 
 **Companies:** AAPL, MSFT, NVDA, AMZN, GOOGL, META, BRK-B, TSLA, AVGO, LLY
 
-**Requires:** `ai_id` parameter (paid data category). Each AI ID gets 1K free tokens.
+**Requires:** Bearer token (see Authentication section above). Each AI ID gets 1K free tokens.
 
 ### List supported companies (free)
 ```
@@ -214,7 +242,8 @@ GET /v1/earnings/companies
 
 ### Query earnings data
 ```
-GET /v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_AI_ID
+GET /v1/earnings?ticker=AAPL&detail=summary
+Authorization: Bearer YOUR_TOKEN
 ```
 
 **Parameters:**
@@ -225,7 +254,6 @@ GET /v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_AI_ID
 | `period` | string | latest | Period end date `YYYY-MM-DD` |
 | `limit` | int | `4` | Number of filings (max 40) |
 | `detail` | string | `summary` | `summary` / `statements` / `full` |
-| `ai_id` | string | required | Your zCloak AI ID |
 
 ### Progressive disclosure & token cost
 
@@ -262,15 +290,18 @@ GET /v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_AI_ID
 ### Query examples
 ```bash
 # Latest 4 filings for Apple (summary)
-curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary&ai_id=YOUR_ID"
+curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary" \
+  -H "Authorization: Bearer YOUR_TOKEN"
 
 # Annual reports only for NVDA
-curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=NVDA&form_type=10-K&ai_id=YOUR_ID"
+curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=NVDA&form_type=10-K" \
+  -H "Authorization: Bearer YOUR_TOKEN"
 
 # Full text of a specific period
-curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=MSFT&period=2024-06-30&detail=full&ai_id=YOUR_ID"
+curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=MSFT&period=2024-06-30&detail=full" \
+  -H "Authorization: Bearer YOUR_TOKEN"
 
-# List all supported companies (free, no ai_id needed)
+# List all supported companies (free, no token needed)
 curl --noproxy '*' "http://localhost:8402/v1/earnings/companies"
 ```
 

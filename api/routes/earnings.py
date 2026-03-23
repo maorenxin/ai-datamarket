@@ -10,7 +10,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from config.earnings import (
     COMPANIES,
@@ -141,27 +141,25 @@ async def list_companies():
 
 @router.get("/earnings")
 async def get_earnings(
+    request: Request,
     ticker: str = Query(..., description="Company ticker, e.g. AAPL"),
     form_type: str = Query("all", description="10-K, 10-Q, or all"),
     period: Optional[str] = Query(None, description="Period end date YYYY-MM-DD (default: latest)"),
     limit: int = Query(4, ge=1, le=40, description="Number of filings to return"),
     detail: str = Query("summary", description="summary / statements / full"),
-    ai_id: Optional[str] = Query(None, description="zCloak AI ID (required — paid data)"),
 ):
-    """Query US stock earnings data. Paid data — requires ai_id."""
-    # Validate ai_id
+    """Query US stock earnings data. Paid data — requires Bearer token (auth handled by middleware)."""
+    # Extract ai_id from Bearer token (set by middleware)
+    from api.db.usage import get_ai_id_by_token
+    ai_id = None
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        ai_id = get_ai_id_by_token(auth_header[7:])
+
     if not ai_id:
         raise HTTPException(
             status_code=401,
-            detail="ai_id is required for earnings data (paid category). Get one free at https://id.zcloak.ai",
-        )
-
-    # Verify AI ID with zCloak
-    from api.auth.zcloak import verify_ai_id
-    if not await verify_ai_id(ai_id):
-        raise HTTPException(
-            status_code=403,
-            detail="Invalid or unrecognized AI ID '{}'. Register at https://id.zcloak.ai".format(ai_id),
+            detail="Bearer token required. Register at POST /v1/auth/register",
         )
 
     # Validate ticker

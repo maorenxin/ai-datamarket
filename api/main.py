@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes.ohlcv import router as ohlcv_router
 from api.routes.earnings import router as earnings_router
+from api.routes.auth import router as auth_router
 from api.payment.x402_middleware import X402Middleware
 
 logging.basicConfig(
@@ -39,7 +40,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -48,6 +49,7 @@ app.add_middleware(X402Middleware)
 
 app.include_router(ohlcv_router, prefix="/v1")
 app.include_router(earnings_router, prefix="/v1")
+app.include_router(auth_router, prefix="/v1")
 
 
 @app.get("/")

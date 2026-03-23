@@ -1,82 +1,86 @@
 """
-zCloak AI ID verification.
+zCloak AI ID verification — on-chain signature via CLI.
 
-Verifies AI IDs via the zCloak credential service at id.zcloak.ai.
-Caches results to avoid repeated HTTP calls.
+Two functions:
+  - verify_onchain_signature: verify a signed message via `zcloak-ai verify message`
+  - verify_ai_id_exists: check if an AI ID is registered on-chain
 """
+import json
 import logging
-import time
-from typing import Dict, Optional, Tuple
-
-import httpx
+import subprocess
+from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Cache: ai_id -> (is_valid, timestamp)
-_cache = {}  # type: Dict[str, Tuple[bool, float]]
-_CACHE_TTL = 300  # 5 minutes
-
-ZCLOAK_API_BASE = "https://id.zcloak.ai"
+CLI_TIMEOUT = 30  # seconds
 
 
-async def verify_ai_id(ai_id: str) -> bool:
-    """
-    Verify a zCloak AI ID is valid and active.
-
-    Checks format, then verifies against zCloak's service.
-    Results are cached for 5 minutes.
-    Returns True if valid, False otherwise.
-    """
-    if not ai_id or not isinstance(ai_id, str):
-        return False
-
-    # Check cache
-    cached = _cache.get(ai_id)
-    if cached:
-        is_valid, ts = cached
-        if time.time() - ts < _CACHE_TTL:
-            return is_valid
-
-    # Basic format check — AI IDs are typically DID strings or hex identifiers
-    # Accept any non-empty string for now; the HTTP check does the real validation
-    ai_id = ai_id.strip()
-    if len(ai_id) < 3:
-        _cache[ai_id] = (False, time.time())
-        return False
-
-    # Verify against zCloak service
+def _run_cli(args: list) -> Tuple[int, str, str]:
+    """Run a zcloak-ai CLI command. Returns (returncode, stdout, stderr)."""
+    cmd = ["zcloak-ai"] + args
+    logger.info("Running CLI: %s", " ".join(cmd))
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            # Try the credential/profile endpoint
-            resp = await client.get(
-                "{}/api/credential/{}".format(ZCLOAK_API_BASE, ai_id),
-                headers={"Accept": "application/json"},
-            )
-            if resp.status_code == 200:
-                _cache[ai_id] = (True, time.time())
-                return True
-
-            # Also try the DID resolution endpoint
-            resp2 = await client.get(
-                "{}/api/did/{}".format(ZCLOAK_API_BASE, ai_id),
-                headers={"Accept": "application/json"},
-            )
-            if resp2.status_code == 200:
-                _cache[ai_id] = (True, time.time())
-                return True
-
-    except Exception as e:
-        # If zCloak is unreachable, allow the request (fail-open for MVP)
-        logger.warning("zCloak verification failed for %s: %s — allowing (fail-open)", ai_id, e)
-        _cache[ai_id] = (True, time.time())
-        return True
-
-    # zCloak returned non-200 — ID not found
-    logger.info("zCloak AI ID not found: %s", ai_id)
-    _cache[ai_id] = (False, time.time())
-    return False
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=CLI_TIMEOUT
+        )
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
+    except FileNotFoundError:
+        return -1, "", "zcloak-ai CLI not found. Install: npm install -g @zcloak/ai-agent@latest"
+    except subprocess.TimeoutExpired:
+        return -2, "", "zcloak-ai CLI timed out after {}s".format(CLI_TIMEOUT)
 
 
-def clear_cache():
-    """Clear the verification cache (for testing)."""
-    _cache.clear()
+def verify_onchain_signature(signed_content: str) -> Tuple[bool, str, Optional[str]]:
+    """
+    Verify a signed message on-chain via `zcloak-ai verify message`.
+
+    Returns (success, message, signer_ai_id).
+    On success, signer_ai_id is the principal that signed the message.
+    """
+    rc, stdout, stderr = _run_cli(["verify", "message", signed_content])
+
+    if rc != 0:
+        err = stderr or stdout or "CLI returned code {}".format(rc)
+        logger.warning("verify message failed: %s", err)
+        return False, err, None
+
+    # Parse output — look for verification result
+    # Expected output contains signer principal and verification status
+    lines = stdout.split("\n")
+    signer_id = None
+    verified = False
+
+    for line in lines:
+        lower = line.lower()
+        # Look for signer/principal info
+        if "principal" in lower or "signer" in lower:
+            # Extract the ID value — typically after a colon or equals
+            for sep in [":", "="]:
+                if sep in line:
+                    val = line.split(sep, 1)[1].strip()
+                    if val:
+                        signer_id = val
+                        break
+        # Look for verification success indicators
+        if "verified" in lower or "valid" in lower or "success" in lower:
+            if "not" not in lower and "invalid" not in lower and "fail" not in lower:
+                verified = True
+
+    if verified and signer_id:
+        return True, "Signature verified", signer_id
+    elif verified:
+        # Verified but couldn't parse signer — still treat as success
+        # The caller should do additional checks
+        return True, "Signature verified (signer not parsed from output)", None
+    else:
+        return False, "Signature verification failed. Output: {}".format(stdout[:200]), None
+
+
+def verify_ai_id_exists(ai_id: str) -> bool:
+    """Check if an AI ID (principal) is registered on-chain."""
+    rc, stdout, stderr = _run_cli(["register", "lookup-by-principal", ai_id])
+    if rc != 0:
+        logger.info("AI ID lookup failed for %s: %s", ai_id, stderr or stdout)
+        return False
+    # Non-empty stdout with no error = exists
+    return bool(stdout)

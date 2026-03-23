@@ -64,6 +64,7 @@ ROUTE_CATEGORY_MAP = {
 FREE_ROUTES = {
     "/", "/health", "/docs", "/redoc", "/openapi.json",
     "/v1/symbols", "/v1/coverage", "/v1/earnings/companies",
+    "/v1/auth/register",
 }
 
 
@@ -76,12 +77,24 @@ def _get_data_category(path: str) -> Optional[str]:
 
 
 def _get_ai_id(request: Request) -> Optional[str]:
-    """Extract AI ID from query params or header."""
-    # Try query param first
+    """Extract AI ID from Bearer token, query params, or header.
+
+    For paid endpoints, Bearer token is the primary auth method.
+    Query param ai_id is still accepted for free-quota checks on free endpoints.
+    """
+    # 1. Bearer token (preferred — proves identity via on-chain signature)
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer "):
+        from api.db.usage import get_ai_id_by_token
+        token = auth[7:]
+        ai_id = get_ai_id_by_token(token)
+        if ai_id:
+            return ai_id
+    # 2. Query param (legacy — will be rejected for paid endpoints below)
     ai_id = request.query_params.get("ai_id")
     if ai_id:
         return ai_id
-    # Try header
+    # 3. Header fallback
     return request.headers.get("x-ai-id")
 
 
@@ -245,8 +258,25 @@ class X402Middleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=401,
                 content={
-                    "error": "ai_id is required for paid data. Pass as query param or X-AI-ID header.",
-                    "get_id": "https://id.zcloak.ai",
+                    "error": "Authentication required for paid data. Register with on-chain signature to get a bearer token.",
+                    "register": "POST /v1/auth/register",
+                    "steps": [
+                        "1. Sign: zcloak-ai sign agreement \"ai-datamarket-auth:{ai_id}:{timestamp}\"",
+                        "2. Register: POST /v1/auth/register with {ai_id, event_id, signed_content}",
+                        "3. Use: Authorization: Bearer <token>",
+                    ],
+                },
+            )
+
+        # Check if auth came from Bearer token (required for paid endpoints)
+        auth_header = request.headers.get("authorization", "")
+        has_bearer = auth_header.startswith("Bearer ")
+        if not has_bearer:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "Bearer token required for paid data. Query param ai_id is no longer accepted for paid endpoints.",
+                    "register": "POST /v1/auth/register",
                 },
             )
 

@@ -8,6 +8,7 @@ import logging
 import sqlite3
 import threading
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,17 @@ def _get_con() -> sqlite3.Connection:
                 total_tokens INTEGER DEFAULT 0
             )
         """)
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS auth_tokens (
+                token TEXT PRIMARY KEY,
+                ai_id TEXT NOT NULL,
+                event_id TEXT NOT NULL,
+                created_at INTEGER DEFAULT (strftime('%s','now'))
+            )
+        """)
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS idx_auth_tokens_ai_id ON auth_tokens(ai_id)"
+        )
         con.commit()
         _local.con = con
     return con
@@ -53,3 +65,34 @@ def add_tokens(ai_id: str, tokens: int):
         (ai_id, tokens),
     )
     con.commit()
+
+
+# ---------------------------------------------------------------------------
+# Auth token management
+# ---------------------------------------------------------------------------
+
+def save_token(token: str, ai_id: str, event_id: str):
+    """Store a bearer token for an AI ID."""
+    con = _get_con()
+    con.execute(
+        "INSERT OR REPLACE INTO auth_tokens (token, ai_id, event_id) VALUES (?, ?, ?)",
+        (token, ai_id, event_id),
+    )
+    con.commit()
+
+
+def get_ai_id_by_token(token: str) -> Optional[str]:
+    """Look up the AI ID associated with a bearer token. Returns None if invalid."""
+    con = _get_con()
+    row = con.execute(
+        "SELECT ai_id FROM auth_tokens WHERE token=?", (token,)
+    ).fetchone()
+    return row[0] if row else None
+
+
+def revoke_tokens(ai_id: str) -> int:
+    """Revoke all tokens for an AI ID. Returns number of tokens revoked."""
+    con = _get_con()
+    cur = con.execute("DELETE FROM auth_tokens WHERE ai_id=?", (ai_id,))
+    con.commit()
+    return cur.rowcount
