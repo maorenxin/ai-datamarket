@@ -359,13 +359,19 @@
         </div>
 
         <!-- Financial Statements -->
-        <div class="data-card-soon rounded-xl p-4 cursor-default">
-          <div class="flex justify-between items-start mb-3">
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+        <div class="data-card-active rounded-xl p-4 cursor-default" style="position:relative; overflow:hidden">
+          <div class="absolute inset-0 rounded-xl" style="background: radial-gradient(circle at 30% 50%, rgba(245,158,11,0.08) 0%, transparent 70%); pointer-events:none"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3)">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+                LIVE
+              </span>
+            </div>
+            <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            <div class="font-semibold text-sm text-white mb-1" data-en="Financial Statements" data-zh="公司财务数据">Financial Statements</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">SEC EDGAR · 10-K/10-Q<br/>10,000+ US Companies · Paid</div>
           </div>
-          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Financial Statements" data-zh="公司财务数据">Financial Statements</div>
-          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="公司财务数据" data-zh="Financial Statements">公司财务数据</div>
         </div>
 
         <!-- EVA Data -->
