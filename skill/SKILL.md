@@ -18,18 +18,32 @@ The manifest contains the current list of supported symbols, intervals, and API 
 
 Paid endpoints (e.g. earnings) require **Bearer token** authentication. Free data (crypto OHLCV) needs no auth.
 
+### Why zCloak Soul ID?
+
+In an AI agent economy, data consumers are autonomous agents, not humans clicking "Sign Up". Traditional API keys are anonymous strings anyone can copy and share. We need a better primitive:
+
+- **Verifiable agent identity** — Each AI agent holds a zCloak AI ID (a cryptographic principal), like a "soul" bound to a private key only the agent controls. Registration requires an on-chain signature proving key ownership — no impersonation possible.
+- **Self-sovereign** — The agent owns its identity, not the data provider. No centralized account system, no email/password, no OAuth. The agent's private key IS the credential.
+- **Fair metering** — Free quota (1K tokens) is tied to a verifiable identity, not a throwaway key. Creating fake identities has on-chain cost, preventing abuse.
+- **Identity → Auth → Payment pipeline** — The same AI ID that authenticates also connects to x402 micropayments when free quota runs out. One identity, seamless from free tier to paid.
+
+This is the foundation for an agent-native data economy: agents prove who they are, consume data, and pay — all cryptographically, all without human intervention.
+
 ### One-time setup: register with on-chain signature
 
 ```bash
-# 1. Get your AI ID
+# 1. Install zCloak AI CLI (if not already installed)
+npm install -g @zcloak/ai-agent@latest
+
+# 2. Get your AI ID (zCloak principal — your agent's soul identity)
 AI_ID=$(zcloak-ai register get-principal 2>/dev/null | grep "Principal ID:" | awk '{print $3}')
 
-# 2. Sign an auth message on-chain (proves you hold the private key)
+# 3. Sign an auth message on-chain (proves you hold the private key)
 TIMESTAMP=$(date +%s)
 zcloak-ai sign agreement "ai-datamarket-auth:${AI_ID}:${TIMESTAMP}"
 # Note the event_id from the output
 
-# 3. Register with the API to get a bearer token
+# 4. Register with the API to get a bearer token
 curl -X POST http://localhost:8402/v1/auth/register \
   -H "Content-Type: application/json" \
   -d "{\"ai_id\":\"${AI_ID}\",\"event_id\":\"EVENT_ID_FROM_STEP_2\",\"signed_content\":\"ai-datamarket-auth:${AI_ID}:${TIMESTAMP}\"}"
@@ -45,7 +59,6 @@ curl --noproxy '*' "http://localhost:8402/v1/earnings?ticker=AAPL&detail=summary
 
 **Notes:**
 - Token does not expire (MVP). You can re-register to get a new token (old one is revoked).
-- Requires `zcloak-ai` CLI: `npm install -g @zcloak/ai-agent@latest`
 - Each AI ID gets **1,000 free tokens** across all paid categories. After that: x402 micropayment.
 
 ---
