@@ -1,7 +1,7 @@
 {
   "name": "ai-datamarket",
   "version": "0.2.0",
-  "description": "AI Bloomberg - Access financial market data for agents (multi-exchange)",
+  "description": "AI Bloomberg - Financial market data for agents: crypto OHLCV (Binance/OKX/Bybit), US stock earnings & financials (SEC EDGAR 10-K/10-Q), income statements, balance sheets",
   "skill_url": "https://maorenxin.github.io/ai-datamarket/skill/SKILL.md",
   "api_base": "http://localhost:8402",
   "data_categories": [
