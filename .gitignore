@@ -13,6 +13,8 @@ dist/
 build/
 
 # DuckDB data (large binary, don't commit)
+data/**/*.duckdb
+data/**/*.duckdb.wal
 data/*.duckdb
 data/*.duckdb.wal
 

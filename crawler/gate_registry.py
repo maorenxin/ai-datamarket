@@ -9,21 +9,28 @@ from crawler.base_gate import BaseGate
 _gates = {}  # type: Dict[str, BaseGate]
 
 
-def get_gate(exchange: str) -> BaseGate:
-    """Return the singleton gate for the given exchange."""
-    if exchange not in _gates:
-        if exchange == "binance":
-            from crawler.binance_gate import gate as bg
-            _gates["binance"] = bg
-        elif exchange == "okx":
-            from crawler.okx_gate import gate as og
-            _gates["okx"] = og
-        elif exchange == "bybit":
-            from crawler.bybit_gate import gate as bg2
-            _gates["bybit"] = bg2
+def get_gate(platform, domain="crypto"):
+    # type: (str, str) -> BaseGate
+    """Return the singleton gate for the given platform.
+    The domain parameter is for future extensibility (e.g. us_stock gates).
+    """
+    key = "{}:{}".format(domain, platform)
+    if key not in _gates:
+        if domain == "crypto":
+            if platform == "binance":
+                from crawler.binance_gate import gate as bg
+                _gates[key] = bg
+            elif platform == "okx":
+                from crawler.okx_gate import gate as og
+                _gates[key] = og
+            elif platform == "bybit":
+                from crawler.bybit_gate import gate as bg2
+                _gates[key] = bg2
+            else:
+                raise ValueError("Unknown crypto platform: {}".format(platform))
         else:
-            raise ValueError("Unknown exchange: {}".format(exchange))
-    return _gates[exchange]
+            raise NotImplementedError("Domain '{}' not yet supported".format(domain))
+    return _gates[key]
 
 
 async def close_all() -> None:

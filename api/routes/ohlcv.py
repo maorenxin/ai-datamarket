@@ -1,5 +1,8 @@
 """
 OHLCV data query routes — multi-exchange support (Binance, OKX, Bybit).
+
+Each exchange has its own DuckDB file. Single-exchange queries hit one file;
+/coverage and /symbols aggregate across all platform files.
 """
 import logging
 from datetime import datetime, timedelta, timezone
@@ -8,7 +11,7 @@ from typing import Dict, List, Optional
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 
-from api.db.duckdb_client import get_con, get_write_con
+from api.db.duckdb_client import get_con, get_all_cons
 from config.symbols import user_symbol_to_db, db_symbol_to_user, TOP_100_BASES
 
 logger = logging.getLogger(__name__)
@@ -25,42 +28,40 @@ INTERVAL_MINUTES = {
 }  # type: Dict[str, int]
 
 
-def parse_end_time(end_time_str: Optional[str], interval: str) -> datetime:
+def parse_end_time(end_time_str, interval):
+    # type: (Optional[str], str) -> datetime
     """
     Parse end_time string (UTC+8 input) and floor to interval boundary.
     Returns UTC-naive datetime.
     """
     minutes = INTERVAL_MINUTES[interval]
     if end_time_str is None:
-        # Default: current time, floored to interval boundary
         now_utc8 = datetime.now(tz=TZ_OFFSET)
     else:
-        # Try parsing with time, then date-only
         for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
             try:
                 parsed = datetime.strptime(end_time_str, fmt)
                 if fmt == "%Y-%m-%d":
-                    # Date-only → 08:00:00 UTC+8 = 00:00:00 UTC
                     parsed = parsed.replace(hour=8, minute=0, second=0)
                 now_utc8 = parsed.replace(tzinfo=TZ_OFFSET)
                 break
             except ValueError:
                 continue
         else:
-            raise HTTPException(status_code=400, detail=f"Invalid end_time format: {end_time_str!r}")
+            raise HTTPException(status_code=400, detail="Invalid end_time format: {!r}".format(end_time_str))
 
-    # Convert to UTC, floor to interval boundary
     utc = now_utc8.astimezone(timezone.utc).replace(tzinfo=None)
     total_seconds = int(utc.timestamp())
     floored_seconds = (total_seconds // (minutes * 60)) * (minutes * 60)
     return datetime.utcfromtimestamp(floored_seconds)
 
 
-def aggregate_ohlcv(df: pd.DataFrame, interval_minutes: int) -> pd.DataFrame:
+def aggregate_ohlcv(df, interval_minutes):
+    # type: (pd.DataFrame, int) -> pd.DataFrame
     """Aggregate 1m candles into the requested interval."""
     if interval_minutes == 1:
         return df
-    freq = f"{interval_minutes}min"
+    freq = "{}min".format(interval_minutes)
     df = df.set_index("open_time").sort_index()
     agg = df.resample(freq, label="left", closed="left").agg(
         open=("open", "first"),
@@ -72,33 +73,6 @@ def aggregate_ohlcv(df: pd.DataFrame, interval_minutes: int) -> pd.DataFrame:
         trade_count=("trade_count", "sum"),
     ).dropna(subset=["open"])
     return agg.reset_index()
-
-
-def count_tokens(ai_id: str) -> int:
-    """Return total tokens used by this AI ID."""
-    con = get_write_con()
-    try:
-        row = con.execute(
-            "SELECT total_tokens FROM ai_id_usage WHERE ai_id=?", [ai_id]
-        ).fetchone()
-        return row[0] if row else 0
-    finally:
-        con.close()
-
-
-def add_tokens(ai_id: str, tokens: int):
-    """Increment token usage for an AI ID."""
-    con = get_write_con()
-    try:
-        con.execute(
-            """
-            INSERT INTO ai_id_usage (ai_id, total_tokens) VALUES (?, ?)
-            ON CONFLICT (ai_id) DO UPDATE SET total_tokens = total_tokens + excluded.total_tokens
-            """,
-            [ai_id, tokens],
-        )
-    finally:
-        con.close()
 
 
 @router.get("/symbols")
@@ -122,54 +96,52 @@ async def data_coverage(
     exchange: Optional[str] = Query(None, description="Filter by exchange: binance, okx, bybit"),
 ):
     """Show available date ranges for each symbol (helps agents pick valid time ranges)."""
-    con = get_con()
-    try:
-        if exchange:
-            df = con.execute(
-                """
-                SELECT symbol, market_type, exchange,
-                       COUNT(*) as rows,
-                       MIN(open_time) as min_time,
-                       MAX(open_time) as max_time
-                FROM ohlcv_1m
-                WHERE exchange=?
-                GROUP BY symbol, market_type, exchange
-                ORDER BY exchange, symbol, market_type
-                """,
-                [exchange],
-            ).fetchdf()
-        else:
-            df = con.execute(
-                """
-                SELECT symbol, market_type, exchange,
-                       COUNT(*) as rows,
-                       MIN(open_time) as min_time,
-                       MAX(open_time) as max_time
-                FROM ohlcv_1m
-                GROUP BY symbol, market_type, exchange
-                ORDER BY exchange, symbol, market_type
-                """
-            ).fetchdf()
-    finally:
-        con.close()
-
     coverage = []
-    for _, row in df.iterrows():
-        ex = row["exchange"]
-        user_sym = db_symbol_to_user(row["symbol"], row["market_type"], ex)
-        min_t = row["min_time"]
-        max_t = row["max_time"]
-        if hasattr(min_t, "replace"):
-            min_t = min_t.replace(tzinfo=timezone.utc).astimezone(TZ_OFFSET).strftime("%Y-%m-%d")
-            max_t = max_t.replace(tzinfo=timezone.utc).astimezone(TZ_OFFSET).strftime("%Y-%m-%d")
-        coverage.append({
-            "symbol": user_sym,
-            "market_type": row["market_type"],
-            "exchange": ex,
-            "rows": int(row["rows"]),
-            "from": min_t,
-            "to": max_t,
-        })
+
+    if exchange:
+        # Single exchange — single file
+        platforms = [exchange]
+    else:
+        platforms = SUPPORTED_EXCHANGES
+
+    for platform in platforms:
+        try:
+            con = get_con(domain="crypto", platform=platform)
+        except Exception:
+            continue
+        try:
+            df = con.execute(
+                """
+                SELECT symbol, market_type, exchange,
+                       COUNT(*) as rows,
+                       MIN(open_time) as min_time,
+                       MAX(open_time) as max_time
+                FROM ohlcv_1m
+                GROUP BY symbol, market_type, exchange
+                ORDER BY exchange, symbol, market_type
+                """
+            ).fetchdf()
+        except Exception:
+            continue
+        finally:
+            con.close()
+
+        for _, row in df.iterrows():
+            ex = row["exchange"]
+            user_sym = db_symbol_to_user(row["symbol"], row["market_type"], ex)
+            min_t = row["min_time"]
+            max_t = row["max_time"]
+            if hasattr(min_t, "replace"):
+                min_t = min_t.replace(tzinfo=timezone.utc).astimezone(TZ_OFFSET).strftime("%Y-%m-%d")
+                max_t = max_t.replace(tzinfo=timezone.utc).astimezone(TZ_OFFSET).strftime("%Y-%m-%d")
+            coverage.append({
+                "symbol": user_sym,
+                "market_type": row["market_type"],
+                "exchange": ex,
+                "rows": int(row["rows"]),
+                "from": min_t,
+                "to": max_t,
+            })
 
     return {"coverage": coverage, "note": "Data is being continuously backfilled. Gaps may exist between 'from' and 'to'."}
 
@@ -213,8 +185,8 @@ async def get_ohlcv(
     end_dt = parse_end_time(end_time, interval)
     start_dt = end_dt - timedelta(minutes=interval_minutes * duration)
 
-    # Query 1m data from DuckDB
-    con = get_con()
+    # Query 1m data from the exchange-specific DuckDB file
+    con = get_con(domain="crypto", platform=exchange)
     try:
         rows = con.execute(
             """
@@ -235,7 +207,7 @@ async def get_ohlcv(
     if rows.empty:
         # Query available date range to help the agent adjust
         try:
-            con2 = get_con()
+            con2 = get_con(domain="crypto", platform=exchange)
             range_row = con2.execute(
                 "SELECT MIN(open_time), MAX(open_time) FROM ohlcv_1m WHERE symbol=? AND market_type=? AND exchange=?",
                 [db_symbol, market_type, exchange],
@@ -265,28 +237,20 @@ async def get_ohlcv(
     tokens_used = len(df)
 
     # Token tracking — only for paid data categories
-    from config.pricing import is_free_category, PAID_FREE_QUOTA
+    from config.pricing import is_free_category
 
-    data_category = "crypto_ohlcv"  # current category; future routes will set this per endpoint
+    data_category = "crypto_ohlcv"
 
-    if is_free_category(data_category):
-        # Free data: no AI ID needed, no billing
-        tokens_remaining = None
-    elif ai_id:
-        # Paid data: track usage, all paid categories share one quota
-        add_tokens(ai_id, tokens_used)
-        total_used = count_tokens(ai_id)
-        tokens_remaining = max(0, PAID_FREE_QUOTA - total_used)
-    else:
-        raise HTTPException(
-            status_code=401,
-            detail="ai_id is required for paid data categories. Get one free at https://id.zcloak.ai",
-        )
+    if not is_free_category(data_category):
+        if not ai_id:
+            raise HTTPException(
+                status_code=401,
+                detail="ai_id is required for paid data categories. Get one free at https://id.zcloak.ai",
+            )
 
     # Format response — times in UTC+8
     data = []
     for _, row in df.iterrows():
-        # open_time is UTC, convert to UTC+8 for response
         t = row["open_time"]
         if hasattr(t, "to_pydatetime"):
             t = t.to_pydatetime()
@@ -310,7 +274,5 @@ async def get_ohlcv(
     }
     if not is_free_category(data_category):
         response["tokens_used"] = tokens_used
-    if tokens_remaining is not None:
-        response["tokens_remaining_free"] = tokens_remaining
 
     return response

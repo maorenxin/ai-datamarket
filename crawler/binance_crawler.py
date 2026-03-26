@@ -35,7 +35,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path(__file__).parent.parent / "data" / "market.duckdb"
+from config.domains import get_db_path
+
+DB_PATH = get_db_path("crypto", "binance")
 
 TARGETS = [
     {"symbol": "BTCUSDT", "market_type": "spot", "start": "2017-08-17"},

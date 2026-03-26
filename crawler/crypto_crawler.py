@@ -1,11 +1,14 @@
 """
-Unified multi-exchange OHLCV Crawler — backward-compatible wrapper.
+Crypto OHLCV Crawler — Binance, OKX, Bybit.
 
-Delegates to CryptoCrawler. Prefer using crypto_crawler.py directly.
+Each exchange writes to its own DuckDB file (data/crypto/{exchange}.duckdb),
+eliminating cross-process lock contention.
 
-Usage (unchanged):
-    python unified_crawler.py --exchange binance --mode backfill --days 7
-    python unified_crawler.py --exchange all --mode live
+Usage:
+    python crypto_crawler.py --exchange binance --mode backfill --days 7
+    python crypto_crawler.py --exchange okx --mode backfill
+    python crypto_crawler.py --exchange bybit --mode backfill --symbol BTCUSDT --days 1
+    python crypto_crawler.py --exchange all --mode live
 """
 import argparse
 import asyncio
@@ -15,16 +18,32 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from config.symbols import get_targets
+from crawler.base_crawler import BaseCrawler
+from crawler.gate_registry import get_gate, close_all
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-from crawler.crypto_crawler import CryptoCrawler
+
+class CryptoCrawler(BaseCrawler):
+    domain = "crypto"
+
+    def get_targets(self, platform):
+        return get_targets(platform)
+
+    def get_gate(self, platform):
+        return get_gate(platform)
+
+    async def close_gates(self):
+        await close_all()
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Unified Multi-Exchange OHLCV Crawler")
+    parser = argparse.ArgumentParser(description="Crypto OHLCV Crawler (per-exchange DuckDB)")
     parser.add_argument("--mode", choices=["backfill", "live"], default="backfill")
     parser.add_argument("--exchange", default="all",
                         help="Exchange: binance, okx, bybit, or all (default: all)")

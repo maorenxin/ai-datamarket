@@ -9,10 +9,11 @@ AI-powered data marketplace skill ("AI Bloomberg") — a Claude skill that gives
 ## Current Architecture
 
 - **Skill definition** (`skill/SKILL.md`, `skill/manifest.json`) — MCP-compatible skill installable via a single prompt command
-- **Data crawler** — Python asyncio, multi-exchange (Binance/OKX/Bybit), minute-level OHLCV stored in DuckDB, checkpoint-based resume
+- **Data crawler** — Python asyncio, BaseCrawler base class + CryptoCrawler for multi-exchange (Binance/OKX/Bybit), minute-level OHLCV stored in per-exchange DuckDB files, checkpoint-based resume
 - **Earnings crawler** (`crawler/earnings_crawler.py`) — SEC EDGAR 10-K/10-Q filings for US Top 10 companies, stores structured XBRL data in SQLite + full text as gzipped Markdown
 - **API layer** (`api/`) — FastAPI on port 8402, serves OHLCV and earnings data
-- **Storage** — DuckDB for time-series (OHLCV), SQLite for document/structured data (earnings at `data/earnings/us.db`), filesystem for full text (`data/earnings/us/{TICKER}/`)
+- **Storage** — Per-exchange DuckDB files (`data/crypto/{exchange}.duckdb`) for time-series OHLCV, SQLite for document/structured data (earnings at `data/earnings/us.db`), filesystem for full text (`data/earnings/us/{TICKER}/`)
+- **Domain registry** (`config/domains.py`) — Central mapping of domain + platform to DuckDB file paths; all components use this to locate DB files
 - **Symbol config** (`config/symbols.py`) — Top 100 crypto bases, per-exchange target generation, symbol format conversion
 - **Earnings config** (`config/earnings.py`) — Top 10 US companies, XBRL metric mappings, SEC EDGAR constants
 - **Landing page** (`web/index.html`) — static single-page site, shows install command + supported data categories with lit/unlit indicators

@@ -66,10 +66,12 @@ async def root():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    db_path = Path(__file__).parent.parent / "data" / "market.duckdb"
+    from config.domains import get_all_db_paths
+    paths = get_all_db_paths("crypto")
+    db_status = {name: path.exists() for name, path in paths.items()}
     return {
         "status": "ok",
-        "db_exists": db_path.exists(),
+        "databases": db_status,
     }
 
 
