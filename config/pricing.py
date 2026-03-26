@@ -16,6 +16,7 @@ from typing import Optional
 DATA_CATEGORIES = {
     # ── Currently active ──
     "crypto_ohlcv":     {"is_free": True},
+    "provider_passthrough": {"is_free": True},
 
     # ── Future paid categories ──
     "stock_ohlcv":      {"is_free": False, "price_per_m": 0.10},

@@ -1,7 +1,7 @@
 {
   "name": "ai-datamarket",
-  "version": "0.2.0",
-  "description": "AI Bloomberg - Financial market data for agents: crypto OHLCV (Binance/OKX/Bybit), US stock earnings & financials (SEC EDGAR 10-K/10-Q), income statements, balance sheets",
+  "version": "0.3.0",
+  "description": "AI Bloomberg - Financial market data for agents: crypto OHLCV, US stock earnings, equity quotes, FRED economics, fixed income, indices, forex, options, international macro (OECD/IMF), energy/commodities",
   "skill_url": "https://maorenxin.github.io/ai-datamarket/skill/SKILL.md",
   "api_base": "http://localhost:8402",
   "data_categories": [
@@ -24,18 +24,20 @@
       "forms": ["10-K", "10-Q"],
       "detail_levels": ["summary", "statements", "full"],
       "source": "SEC EDGAR"
-    }
+    },
+    {"id": "equity", "name": "Equity / Stock Data", "status": "active", "pricing": "free", "source": "Yahoo Finance"},
+    {"id": "economy", "name": "Economy (FRED)", "status": "active", "pricing": "free", "source": "FRED"},
+    {"id": "fixedincome", "name": "Fixed Income / Bonds", "status": "active", "pricing": "free", "source": "FRED"},
+    {"id": "index_data", "name": "Market Indices", "status": "active", "pricing": "free", "source": "Yahoo Finance"},
+    {"id": "currency", "name": "Currency / Forex", "status": "active", "pricing": "free", "source": "Yahoo Finance"},
+    {"id": "derivatives", "name": "Options / Derivatives", "status": "active", "pricing": "free", "source": "Yahoo Finance"},
+    {"id": "macro_intl", "name": "International Macro", "status": "active", "pricing": "free", "source": "OECD, IMF"},
+    {"id": "energy", "name": "Energy / Commodities", "status": "active", "pricing": "free", "source": "FRED, EIA"}
   ],
   "coming_soon": [
-    {"id": "stock_ohlcv", "pricing": "paid"},
-    {"id": "futures_ohlcv", "pricing": "paid"},
-    {"id": "options_data", "pricing": "paid"},
-    {"id": "macro_data", "pricing": "paid"},
     {"id": "fund_data", "pricing": "paid"},
-    {"id": "bond_data", "pricing": "paid"},
-    {"id": "index_data", "pricing": "paid"},
     {"id": "industrial_chain", "pricing": "paid"}
   ],
   "paid_data_free_quota": 1000,
-  "updated_at": "2026-03-21T00:00:00Z"
+  "updated_at": "2026-03-26T00:00:00Z"
 }

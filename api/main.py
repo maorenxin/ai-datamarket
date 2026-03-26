@@ -20,6 +20,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes.ohlcv import router as ohlcv_router
 from api.routes.earnings import router as earnings_router
 from api.routes.auth import router as auth_router
+from api.routes.equity import router as equity_router
+from api.routes.economy import router as economy_router
+from api.routes.fixedincome import router as fixedincome_router
+from api.routes.index_data import router as index_router
+from api.routes.currency import router as currency_router
+from api.routes.derivatives import router as derivatives_router
+from api.routes.macro_intl import router as macro_router
+from api.routes.energy import router as energy_router
 from api.payment.x402_middleware import X402Middleware
 
 logging.basicConfig(
@@ -50,6 +58,14 @@ app.add_middleware(X402Middleware)
 app.include_router(ohlcv_router, prefix="/v1")
 app.include_router(earnings_router, prefix="/v1")
 app.include_router(auth_router, prefix="/v1")
+app.include_router(equity_router, prefix="/v1")
+app.include_router(economy_router, prefix="/v1")
+app.include_router(fixedincome_router, prefix="/v1")
+app.include_router(index_router, prefix="/v1")
+app.include_router(currency_router, prefix="/v1")
+app.include_router(derivatives_router, prefix="/v1")
+app.include_router(macro_router, prefix="/v1")
+app.include_router(energy_router, prefix="/v1")
 
 
 @app.get("/")

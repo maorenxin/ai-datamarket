@@ -229,7 +229,279 @@ python3 scripts/pay_x402.py "http://localhost:8402/v1/earnings?ticker=AAPL&detai
 
 ## Coming Soon
 
-Stock OHLCV · Company Governance · EVA Data · Fund Data · Bond Data · Options · Domestic Futures · Commodities · OTC Market · Banking Data · Internet Products · Overseas Markets · Market News · Legal & Regulatory · Exhibition Info · Index Data · International Futures · Macroeconomics · Industrial Chain Data
+Company Governance · EVA Data · Fund Data · OTC Market · Banking Data · Internet Products · Market News · Legal & Regulatory · Exhibition Info · Industrial Chain Data
+
+---
+
+## Equity / Stock Data (Active — Free)
+
+**Source:** Yahoo Finance (real-time quotes, historical OHLCV, company profiles).
+
+### List example tickers
+```
+GET /v1/equity/available
+```
+
+### Real-time quote
+```
+GET /v1/equity/quote?symbol=AAPL
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `symbol` | string | required | Ticker, e.g. AAPL, MSFT, TSLA |
+
+### Historical OHLCV
+```
+GET /v1/equity/history?symbol=AAPL&period=1mo&interval=1d
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `symbol` | string | required | Ticker |
+| `period` | string | `1mo` | 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max |
+| `interval` | string | `1d` | 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo |
+
+### Company profile
+```
+GET /v1/equity/info?symbol=AAPL
+```
+
+```bash
+curl --noproxy '*' "http://localhost:8402/v1/equity/quote?symbol=AAPL"
+curl --noproxy '*' "http://localhost:8402/v1/equity/history?symbol=MSFT&period=3mo&interval=1d"
+curl --noproxy '*' "http://localhost:8402/v1/equity/info?symbol=NVDA"
+```
+
+---
+
+## Economy / FRED Data (Active — Free)
+
+**Source:** Federal Reserve Economic Data (FRED) — GDP, CPI, unemployment, interest rates, and 800K+ series.
+
+### List common series
+```
+GET /v1/economy/available
+```
+
+### Fetch a time series
+```
+GET /v1/economy/series?series_id=GDP&limit=60
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `series_id` | string | required | FRED series ID: GDP, UNRATE, CPIAUCSL, FEDFUNDS, etc. |
+| `limit` | int | `60` | Number of recent observations (max 1000) |
+
+### Search FRED series
+```
+GET /v1/economy/search?query=inflation&limit=10
+```
+
+```bash
+curl --noproxy '*' "http://localhost:8402/v1/economy/series?series_id=UNRATE&limit=24"
+curl --noproxy '*' "http://localhost:8402/v1/economy/search?query=consumer+price+index"
+```
+
+---
+
+## Fixed Income / Bond Data (Active — Free)
+
+**Source:** FRED — Treasury yields, mortgage rates, corporate bond spreads.
+
+### List rate series
+```
+GET /v1/fixedincome/available
+```
+
+### Fetch rate data
+```
+GET /v1/fixedincome/rates?series_id=DGS10&limit=60
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `series_id` | string | `DGS10` | DGS10, DGS2, FEDFUNDS, MORTGAGE30US, AAA, BAA, etc. |
+| `limit` | int | `60` | Number of recent observations (max 1000) |
+
+### Yield spread
+```
+GET /v1/fixedincome/spread?long_series=DGS10&short_series=DGS2&limit=60
+```
+
+```bash
+curl --noproxy '*' "http://localhost:8402/v1/fixedincome/rates?series_id=DGS10&limit=30"
+curl --noproxy '*' "http://localhost:8402/v1/fixedincome/spread?long_series=DGS10&short_series=DGS2"
+```
+
+---
+
+## Index Data (Active — Free)
+
+**Source:** Yahoo Finance — S&P 500, Dow Jones, NASDAQ, VIX, international indices.
+
+### List supported indices
+```
+GET /v1/index/available
+```
+
+### Real-time index quote
+```
+GET /v1/index/quote?symbol=^GSPC
+```
+
+### Historical index data
+```
+GET /v1/index/history?symbol=^GSPC&period=1mo&interval=1d
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `symbol` | string | `^GSPC` | ^GSPC, ^DJI, ^IXIC, ^VIX, ^FTSE, ^N225, ^HSI, etc. |
+| `period` | string | `1mo` | 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max |
+| `interval` | string | `1d` | 1d,5d,1wk,1mo,3mo |
+
+```bash
+curl --noproxy '*' "http://localhost:8402/v1/index/quote?symbol=%5EGSPC"
+curl --noproxy '*' "http://localhost:8402/v1/index/history?symbol=%5EVIX&period=3mo"
+```
+
+---
+
+## Currency / Forex (Active — Free)
+
+**Source:** Yahoo Finance — major forex pairs and DXY.
+
+### List forex pairs
+```
+GET /v1/currency/available
+```
+
+### Current exchange rate
+```
+GET /v1/currency/rate?symbol=EURUSD=X
+```
+
+### Historical forex data
+```
+GET /v1/currency/history?symbol=EURUSD=X&period=1mo&interval=1d
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `symbol` | string | `EURUSD=X` | EURUSD=X, USDJPY=X, GBPUSD=X, USDCNY=X, DX-Y.NYB (DXY) |
+| `period` | string | `1mo` | 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max |
+| `interval` | string | `1d` | 1d,5d,1wk,1mo,3mo |
+
+```bash
+curl --noproxy '*' "http://localhost:8402/v1/currency/rate?symbol=EURUSD%3DX"
+curl --noproxy '*' "http://localhost:8402/v1/currency/history?symbol=USDJPY%3DX&period=3mo"
+```
+
+---
+
+## Derivatives / Options (Active — Free)
+
+**Source:** Yahoo Finance — US equity and ETF options chains.
+
+### List example tickers
+```
+GET /v1/derivatives/available
+```
+
+### Available expiration dates
+```
+GET /v1/derivatives/expirations?symbol=AAPL
+```
+
+### Options chain
+```
+GET /v1/derivatives/chain?symbol=AAPL&option_type=calls
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `symbol` | string | required | Ticker, e.g. AAPL, SPY, QQQ |
+| `expiration` | string | nearest | Expiration date YYYY-MM-DD |
+| `option_type` | string | `calls` | `calls` or `puts` |
+
+```bash
+curl --noproxy '*' "http://localhost:8402/v1/derivatives/expirations?symbol=AAPL"
+curl --noproxy '*' "http://localhost:8402/v1/derivatives/chain?symbol=SPY&option_type=puts"
+```
+
+---
+
+## International Macro (Active — Free)
+
+**Source:** OECD (SDMX API) and IMF (World Economic Outlook).
+
+### List indicators
+```
+GET /v1/macro/available
+```
+
+### OECD data
+```
+GET /v1/macro/oecd?dataset=QNA&country=USA&subject=B1_GE&measure=VOBARSA&frequency=Q&start_time=2020
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `dataset` | string | `QNA` | OECD dataset ID: QNA (GDP), PRICES_CPI (CPI), LFS_SEXAGE_I_R (labor) |
+| `country` | string | `USA` | ISO 3-letter code: USA, GBR, JPN, DEU, FRA, etc. |
+| `subject` | string | `B1_GE` | Subject code: B1_GE (GDP), CPALTT01 (CPI) |
+| `measure` | string | `VOBARSA` | Measure: VOBARSA (volume), IXOB (index), GY (growth rate) |
+| `frequency` | string | `Q` | A (annual), Q (quarterly), M (monthly) |
+| `start_time` | string | `2015` | Start period, e.g. 2015 or 2020-Q1 |
+| `limit` | int | `20` | Number of recent observations (max 100) |
+
+### IMF data
+```
+GET /v1/macro/imf?indicator=NGDP_RPCH&country=US
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `indicator` | string | `NGDP_RPCH` | NGDP_RPCH (GDP growth), PCPIPCH (inflation), LUR (unemployment) |
+| `country` | string | `US` | ISO 2-letter code: US, GB, JP, CN, DE, etc. |
+
+```bash
+curl --noproxy '*' "http://localhost:8402/v1/macro/imf?indicator=NGDP_RPCH&country=CN&limit=20"
+curl --noproxy '*' "http://localhost:8402/v1/macro/oecd?dataset=QNA&country=USA&subject=B1_GE&measure=GY&frequency=Q&start_time=2020&limit=10"
+```
+
+---
+
+## Energy / Commodities (Active — Free)
+
+**Source:** FRED for commodity prices (oil, gold, gas). EIA for US energy statistics (optional API key).
+
+### List commodity series
+```
+GET /v1/energy/available
+```
+
+### Commodity price
+```
+GET /v1/energy/price?series_id=DCOILWTICO&limit=60
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `series_id` | string | `DCOILWTICO` | DCOILWTICO (WTI), DCOILBRENTEU (Brent), GOLDAMGBD228NLBM (Gold), DHHNGSP (NatGas) |
+| `limit` | int | `60` | Number of recent observations (max 1000) |
+
+### EIA energy data (requires EIA_API_KEY)
+```
+GET /v1/energy/eia?series_id=ELEC.GEN.ALL-US-99.M&limit=24
+```
+
+```bash
+curl --noproxy '*' "http://localhost:8402/v1/energy/price?series_id=DCOILWTICO&limit=30"
+curl --noproxy '*' "http://localhost:8402/v1/energy/price?series_id=GOLDAMGBD228NLBM&limit=60"
+```
 
 ---
 

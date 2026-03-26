@@ -58,6 +58,14 @@ ROUTE_CATEGORY_MAP = {
     "/v1/earnings": "stock_financials",
     "/v1/coverage": "crypto_ohlcv",
     "/v1/symbols": "crypto_ohlcv",
+    "/v1/equity": "provider_passthrough",
+    "/v1/economy": "provider_passthrough",
+    "/v1/fixedincome": "provider_passthrough",
+    "/v1/index": "provider_passthrough",
+    "/v1/currency": "provider_passthrough",
+    "/v1/derivatives": "provider_passthrough",
+    "/v1/macro": "provider_passthrough",
+    "/v1/energy": "provider_passthrough",
 }
 
 # Routes that are always free (no payment check)
@@ -65,6 +73,9 @@ FREE_ROUTES = {
     "/", "/health", "/docs", "/redoc", "/openapi.json",
     "/v1/symbols", "/v1/coverage", "/v1/earnings/companies",
     "/v1/auth/register",
+    "/v1/equity/available", "/v1/economy/available", "/v1/fixedincome/available",
+    "/v1/index/available", "/v1/currency/available", "/v1/derivatives/available",
+    "/v1/macro/available", "/v1/energy/available",
 }
 
 
