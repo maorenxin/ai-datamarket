@@ -265,7 +265,7 @@
 
         <!-- Note line -->
         <p class="text-xs font-mono text-slate-500 mt-4 text-center">
-          <span data-en="Free · 10M tokens included · " data-zh="免费 · 内含 1000 万 token · ">Free · 10M tokens included · </span>
+          <span data-en="Agent-native API · x402 Protocol · " data-zh="Agent 原生 API · x402 协议 · ">Agent-native API · x402 Protocol · </span>
           <a href="https://id.zcloak.ai" target="_blank" rel="noopener" class="text-gold-500 hover:text-gold-400 underline underline-offset-2 transition-colors duration-200">
             <span data-en="zCloak AI ID required" data-zh="需要 zCloak AI ID">zCloak AI ID required</span>
           </a>
@@ -275,13 +275,13 @@
       <!-- Quick stats -->
       <div class="flex flex-wrap justify-center gap-8 mt-14 text-center">
         <div>
-          <div class="font-orbitron text-2xl font-bold text-gold-400">6</div>
+          <div class="font-orbitron text-2xl font-bold text-gold-400">600+</div>
           <div class="text-xs text-slate-500 mt-1 font-mono" data-en="Trading Pairs" data-zh="交易对">Trading Pairs</div>
         </div>
         <div class="w-px h-10 bg-white/10 self-center hidden sm:block"></div>
         <div>
-          <div class="font-orbitron text-2xl font-bold text-gold-400">10M</div>
-          <div class="text-xs text-slate-500 mt-1 font-mono" data-en="Free Tokens" data-zh="免费 Token">Free Tokens</div>
+          <div class="font-orbitron text-2xl font-bold text-gold-400">10K+</div>
+          <div class="text-xs text-slate-500 mt-1 font-mono" data-en="US Companies" data-zh="美股公司">US Companies</div>
         </div>
         <div class="w-px h-10 bg-white/10 self-center hidden sm:block"></div>
         <div>
@@ -333,19 +333,25 @@
             <!-- Icon -->
             <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
             <div class="font-semibold text-sm text-white mb-1" data-en="Crypto Market Data" data-zh="加密货币市场数据">Crypto Market Data</div>
-            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">BTC · ETH · SOL<br/>Spot &amp; Perp · OHLCV</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">Binance · OKX · Bybit<br/>Top 100 Spot &amp; Perp · 1m OHLCV</div>
           </div>
         </div>
 
         <!-- ── COMING SOON cards ── -->
         <!-- Stock Trading -->
-        <div class="data-card-soon rounded-xl p-4 cursor-default">
-          <div class="flex justify-between items-start mb-3">
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+        <div class="data-card-active rounded-xl p-4 cursor-default" style="position:relative; overflow:hidden">
+          <div class="absolute inset-0 rounded-xl" style="background: radial-gradient(circle at 30% 50%, rgba(245,158,11,0.08) 0%, transparent 70%); pointer-events:none"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3)">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+                LIVE
+              </span>
+            </div>
+            <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+            <div class="font-semibold text-sm text-white mb-1" data-en="Stock Trading Data" data-zh="股票交易数据">Stock Trading Data</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">Yahoo Finance · Real-time<br/>Quotes · History · Profiles</div>
           </div>
-          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
-          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Stock Trading Data" data-zh="股票交易数据">Stock Trading Data</div>
-          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="股票交易数据" data-zh="Stock Trading">股票交易数据</div>
         </div>
 
         <!-- Corporate Governance -->
@@ -395,23 +401,35 @@
         </div>
 
         <!-- Bond Data -->
-        <div class="data-card-soon rounded-xl p-4 cursor-default">
-          <div class="flex justify-between items-start mb-3">
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+        <div class="data-card-active rounded-xl p-4 cursor-default" style="position:relative; overflow:hidden">
+          <div class="absolute inset-0 rounded-xl" style="background: radial-gradient(circle at 30% 50%, rgba(245,158,11,0.08) 0%, transparent 70%); pointer-events:none"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3)">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+                LIVE
+              </span>
+            </div>
+            <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <div class="font-semibold text-sm text-white mb-1" data-en="Bond Data" data-zh="债券数据">Bond Data</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">FRED · Treasury Yields<br/>Mortgage Rates · Spreads</div>
           </div>
-          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Bond Data" data-zh="债券数据">Bond Data</div>
-          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="债券数据" data-zh="Bond">债券数据</div>
         </div>
 
         <!-- Options -->
-        <div class="data-card-soon rounded-xl p-4 cursor-default">
-          <div class="flex justify-between items-start mb-3">
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+        <div class="data-card-active rounded-xl p-4 cursor-default" style="position:relative; overflow:hidden">
+          <div class="absolute inset-0 rounded-xl" style="background: radial-gradient(circle at 30% 50%, rgba(245,158,11,0.08) 0%, transparent 70%); pointer-events:none"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3)">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+                LIVE
+              </span>
+            </div>
+            <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 0 1 2 2v7"></path><line x1="6" y1="9" x2="6" y2="21"></line></svg>
+            <div class="font-semibold text-sm text-white mb-1" data-en="Options" data-zh="期权数据">Options</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">Yahoo Finance · Chains<br/>Calls · Puts · Expirations</div>
           </div>
-          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 0 1 2 2v7"></path><line x1="6" y1="9" x2="6" y2="21"></line></svg>
-          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Options" data-zh="期权数据">Options</div>
-          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="期权数据" data-zh="Options">期权数据</div>
         </div>
 
         <!-- Domestic Futures -->
@@ -425,13 +443,19 @@
         </div>
 
         <!-- Commodities -->
-        <div class="data-card-soon rounded-xl p-4 cursor-default">
-          <div class="flex justify-between items-start mb-3">
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+        <div class="data-card-active rounded-xl p-4 cursor-default" style="position:relative; overflow:hidden">
+          <div class="absolute inset-0 rounded-xl" style="background: radial-gradient(circle at 30% 50%, rgba(245,158,11,0.08) 0%, transparent 70%); pointer-events:none"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3)">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+                LIVE
+              </span>
+            </div>
+            <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            <div class="font-semibold text-sm text-white mb-1" data-en="Commodities" data-zh="大宗产品数据">Commodities</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">FRED · Oil · Gold · Gas<br/>Copper · Energy Data</div>
           </div>
-          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Commodities" data-zh="大宗产品数据">Commodities</div>
-          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="大宗产品数据" data-zh="Commodities">大宗产品数据</div>
         </div>
 
         <!-- OTC Market -->
@@ -465,13 +489,19 @@
         </div>
 
         <!-- Overseas Markets -->
-        <div class="data-card-soon rounded-xl p-4 cursor-default">
-          <div class="flex justify-between items-start mb-3">
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+        <div class="data-card-active rounded-xl p-4 cursor-default" style="position:relative; overflow:hidden">
+          <div class="absolute inset-0 rounded-xl" style="background: radial-gradient(circle at 30% 50%, rgba(245,158,11,0.08) 0%, transparent 70%); pointer-events:none"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3)">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+                LIVE
+              </span>
+            </div>
+            <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"></path><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg>
+            <div class="font-semibold text-sm text-white mb-1" data-en="Overseas Markets" data-zh="海外市场">Overseas Markets</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">Yahoo Finance · Forex<br/>EUR/USD · USD/JPY · DXY</div>
           </div>
-          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"></path><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg>
-          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Overseas Markets" data-zh="海外市场">Overseas Markets</div>
-          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="海外市场" data-zh="Overseas">海外市场</div>
         </div>
 
         <!-- Market News -->
@@ -505,13 +535,19 @@
         </div>
 
         <!-- Index Data -->
-        <div class="data-card-soon rounded-xl p-4 cursor-default">
-          <div class="flex justify-between items-start mb-3">
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+        <div class="data-card-active rounded-xl p-4 cursor-default" style="position:relative; overflow:hidden">
+          <div class="absolute inset-0 rounded-xl" style="background: radial-gradient(circle at 30% 50%, rgba(245,158,11,0.08) 0%, transparent 70%); pointer-events:none"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3)">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+                LIVE
+              </span>
+            </div>
+            <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+            <div class="font-semibold text-sm text-white mb-1" data-en="Index Data" data-zh="指数数据">Index Data</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">S&amp;P 500 · Dow · NASDAQ<br/>VIX · FTSE · Nikkei · HSI</div>
           </div>
-          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
-          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Index Data" data-zh="指数数据">Index Data</div>
-          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="指数数据" data-zh="Index">指数数据</div>
         </div>
 
         <!-- Intl Futures -->
@@ -525,13 +561,19 @@
         </div>
 
         <!-- Macroeconomics -->
-        <div class="data-card-soon rounded-xl p-4 cursor-default">
-          <div class="flex justify-between items-start mb-3">
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full text-slate-500" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06)">SOON</span>
+        <div class="data-card-active rounded-xl p-4 cursor-default" style="position:relative; overflow:hidden">
+          <div class="absolute inset-0 rounded-xl" style="background: radial-gradient(circle at 30% 50%, rgba(245,158,11,0.08) 0%, transparent 70%); pointer-events:none"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded-full" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3)">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse inline-block"></span>
+                LIVE
+              </span>
+            </div>
+            <svg class="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z"></path><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <div class="font-semibold text-sm text-white mb-1" data-en="Macroeconomics" data-zh="宏观经济数据">Macroeconomics</div>
+            <div class="text-xs font-mono text-gold-500/70 leading-relaxed">FRED · OECD · IMF<br/>GDP · CPI · Rates · Employment</div>
           </div>
-          <svg class="w-5 h-5 mb-2 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z"></path><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-          <div class="font-medium text-xs text-slate-400 leading-snug" data-en="Macroeconomics" data-zh="宏观经济数据">Macroeconomics</div>
-          <div class="text-xs text-slate-600 font-mono mt-0.5" data-en="宏观经济数据" data-zh="Macro">宏观经济数据</div>
         </div>
 
         <!-- Industrial Chain -->
